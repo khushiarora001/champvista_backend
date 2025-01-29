@@ -1,0 +1,240 @@
+{
+    "info": {
+        "name": "School Management API",
+        "description": "Complete API collection for the School Management System.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000"
+        },
+        {
+            "key": "api_key",
+            "value": "your_api_key"
+        },
+        {
+            "key": "api_secret",
+            "value": "your_api_secret"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication APIs",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/login",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"email\": \"admin@example.com\", \"password\": \"password\" }"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Dashboard APIs",
+            "item": [
+                {
+                    "name": "Get Dashboard Summary",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/dashboard/summary",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "Get Total Institutes",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/dashboard/institutes",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "School APIs",
+            "item": [
+                {
+                    "name": "Add School",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/school/add",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"name\": \"ABC School\", \"address\": \"123 Street\", \"contact\": \"9876543210\" }"
+                        }
+                    }
+                },
+                {
+                    "name": "Update Plan Expiry Date",
+                    "request": {
+                        "method": "PUT",
+                        "url": "{{base_url}}/school/update-plan",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"schoolId\": \"12345\", \"expiryDate\": \"2025-01-01\" }"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Class APIs",
+            "item": [
+                {
+                    "name": "Add Class",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/class/add",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"className\": \"10th Grade\", \"teacherId\": \"12345\" }"
+                        }
+                    }
+                },
+                {
+                    "name": "View Class Timetable",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/class/timetable/12345",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Teacher APIs",
+            "item": [
+                {
+                    "name": "Add Teacher",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/teacher/add",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"name\": \"John Doe\", \"contact\": \"1234567890\", \"subject\": \"Math\" }"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Student APIs",
+            "item": [
+                {
+                    "name": "Add Student",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/student/add",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"name\": \"Jane Doe\", \"admissionNo\": \"A12345\" }"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Calendar APIs",
+            "item": [
+                {
+                    "name": "Add Calendar Entry",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/calendar/add",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"eventDetails\": \"Annual Function on Jan 25th\" }"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
