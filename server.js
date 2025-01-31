@@ -8,7 +8,7 @@ const app = express();
 
 
 const corsOptions = {
-    origin: 'https://www-champvista-com.onrender.com/',  // ✅ Sabhi origins allow karein (Agar restricted karna hai to specific origin daalein)
+    origin: 'https://www-champvista-com.onrender.com',  // ✅ Sabhi origins allow karein (Agar restricted karna hai to specific origin daalein)
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // ✅ Allowed methods
     allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Allowed Headers
 };
