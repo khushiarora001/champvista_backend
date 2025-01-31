@@ -8,14 +8,26 @@ const app = express();
 
 
 app.use(cors({
-    origin: "*",  // Specify the frontend URL
+    origin: 'https://www-champvista-com.onrender.com',  // ✅ Sirf frontend ka URL allow karein
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],  // Include necessary headers
-    // If you're sending cookies or auth headers
+    allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Extra headers hata dein
+    credentials: true,
 }));
 
-// Handle preflight OPTIONS request
-app.options('*', cors());
+// ✅ Preflight request ka sahi response
+app.options('*', (req, res) => {
+    res.header("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.sendStatus(204);
+});
+
+// ✅ Route Example (Ensure headers are sent properly)
+app.post('/auth/login', (req, res) => {
+    res.header("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.json({ message: "Login Successful" });
+});
 
 // Load environment variables
 dotenv.config();
