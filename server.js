@@ -8,7 +8,7 @@ const app = express();
 
 
 app.use(cors({
-    origin: ['https://www-champvista-com.onrender.com', 'http://localhost:3000'],  // Specify the frontend URL
+    origin: "*",  // Specify the frontend URL
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],  // Include necessary headers
     // If you're sending cookies or auth headers
