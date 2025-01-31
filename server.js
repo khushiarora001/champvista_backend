@@ -1,31 +1,43 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 const connectDB = require('./config/db');
+
+// Initialize Express App
 const app = express();
 
-const cors = require('cors');
 
+const corsOptions = {
+    origin: '*',  // ✅ Sabhi origins allow karein (Agar restricted karna hai to specific origin daalein)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // ✅ Allowed methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Allowed Headers
+};
 
-// Enable CORS for all routes
-app.use(cors());
+// ✅ CORS ko middleware ke roop me use karein
+app.use(cors(corsOptions));
+
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-// Middleware
+// ✅ CORS Middleware
+
+
+// ✅ JSON Middleware (MUST BE HERE)
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));  // ✅ For form-urlencoded data
 
 // Routes
-app.use('/auth', require('./routes/authroute'));  // Auth routes
-app.use('/dashboard', require('./routes/dashboard_route'));  // Dashboard routes
-app.use('/school', require('./routes/schoolroute'));  // School routes
-app.use('/teacher', require('./routes/teacher_routes'));  // Teacher routes
-app.use('/student', require('./routes/studentroute'));  // Student routes
-app.use('/calendar', require('./routes/calendar_route'));  // Calendar routes
-app.use('/class', require('./routes/class_routes'));  // Class routes
-app.use('/leave', require('./routes/leave_routes'));  // Leave routes
+app.use('/auth', require('./routes/authroute'));
+app.use('/dashboard', require('./routes/dashboard_route'));
+app.use('/school', require('./routes/schoolroute'));
+app.use('/teacher', require('./routes/teacher_routes'));
+app.use('/student', require('./routes/studentroute'));
+app.use('/calendar', require('./routes/calendar_route'));
+app.use('/class', require('./routes/class_routes'));
+app.use('/leave', require('./routes/leave_routes'));
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -40,6 +52,6 @@ app.use((err, req, res, next) => {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
 module.exports = app;

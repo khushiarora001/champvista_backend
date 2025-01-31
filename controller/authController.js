@@ -28,62 +28,52 @@ exports.signup = async (req, res) => {
 };
 
 // Login Route
-
-
 exports.login = async (req, res) => {
     try {
+        console.log("🔍 Received Headers:", req.headers);
+        console.log("🔍 Received Body:", req.body);
+
         const { email, password } = req.body;
 
-        // Find user by email
+        if (!email || !password) {
+            return res.status(400).json({
+                success: 0,
+                message: 'Email and password are required',
+                receivedBody: req.body,
+            });
+        }
+
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({
                 success: 0,
                 message: 'User not found',
-                email,
-                password,
             });
         }
 
-        // Check password
+        // Password Check
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({
                 success: 0,
                 message: 'Invalid password',
-                email,
-                password,
             });
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        // Generate JWT Token
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        // Include the API key and API secret if needed
-        const { apiKey, apiSecret, role } = user; // Assuming these fields exist in the User schema
-
-        // Respond with success, token, role, API key, API secret, email, and password
         res.json({
             success: 1,
             message: 'Login successful',
             token,
-            userRole: role,
-            apiKey,
-            apiSecret,
-            email,
-            password,
         });
     } catch (error) {
-        console.error(error);
+        console.error("🔥 Login Error:", error);
         res.status(500).json({
             success: 0,
             message: 'Server error during login',
-            email,
-            password,
+            error: error.message,
         });
     }
 };

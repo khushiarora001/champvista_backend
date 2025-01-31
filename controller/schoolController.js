@@ -192,7 +192,7 @@ exports.getSchoolList = async (req, res) => {
         }
         // Fetch filtered data
         const schools = await School.find(query).select(
-            "name contactNumber website affiliationNumber address city state pincode googleMapLink schoolEmail password planExpiry"
+            "name contact website affiliationNumber address city state pincode googleMapLink schoolEmail password planExpiry"
         );
 
         res.status(200).json({
