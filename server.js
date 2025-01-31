@@ -8,7 +8,7 @@ const app = express();
 
 
 app.use(cors({
-    origin: 'https://www-champvista-com.onrender.com',  // ✅ Sirf frontend ka URL allow karein
+    origin: "*",  // ✅ Sirf frontend ka URL allow karein
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Extra headers hata dein
     credentials: true,
@@ -24,7 +24,7 @@ app.options('*', (req, res) => {
 
 // ✅ Route Example (Ensure headers are sent properly)
 app.post('/auth/login', (req, res) => {
-    res.header("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
+    res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Credentials", "true");
     res.json({ message: "Login Successful" });
 });
