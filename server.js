@@ -7,14 +7,15 @@ const connectDB = require('./config/db');
 const app = express();
 
 
-const corsOptions = {
-    origin: 'https://www-champvista-com.onrender.com',  // ✅ Sabhi origins allow karein (Agar restricted karna hai to specific origin daalein)
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // ✅ Allowed methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Allowed Headers
-};
+app.use(cors({
+    origin: 'https://www-champvista-com.onrender.com',  // Specify the frontend URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],  // Include necessary headers
+    // If you're sending cookies or auth headers
+}));
 
-// ✅ CORS ko middleware ke roop me use karein
-app.use(cors(corsOptions));
+// Handle preflight OPTIONS request
+app.options('*', cors());
 
 // Load environment variables
 dotenv.config();
