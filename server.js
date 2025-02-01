@@ -6,33 +6,45 @@ const connectDB = require('./config/db');
 // Initialize Express App
 const app = express();
 
-
-const corsOptions = {
-    origin: "https://www-champvista-com.onrender.com", // Change to your Flutter web URL
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-};
-app.use(cors(corsOptions));
-app.options("*", (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Allow-Credentials", "true"); // Important for auth
-    res.status(204).end();
-});
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-// ✅ CORS Middleware
+// CORS Configuration
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            "https://www-champvista-com.onrender.com", // Flutter Web URL
+            // Add other domains if required in the future
+        ];
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,  // To allow cookies (Authorization header)
+};
 
+// Use CORS Middleware
+app.use(cors(corsOptions));
 
-// ✅ JSON Middleware (MUST BE HERE)
+// Preflight OPTIONS request handling
+app.options('*', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', 'https://www-champvista-com.onrender.com');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true'); // Important for Auth token
+    res.status(204).end();
+});
+
+// ✅ JSON Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));  // ✅ For form-urlencoded data
+app.use(express.urlencoded({ extended: true }));  // For form-urlencoded data
 
 // Routes
 app.use('/auth', require('./routes/authroute'));
