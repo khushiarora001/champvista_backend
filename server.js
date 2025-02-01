@@ -14,7 +14,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-
+app.options("*", cors(corsOptions));
 // Load environment variables
 dotenv.config();
 
