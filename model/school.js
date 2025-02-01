@@ -12,7 +12,8 @@ const schoolSchema = new mongoose.Schema({
     googleMapLink: { type: String, required: true },
     schoolEmail: { type: String, required: false },
     planExpiry: { type: Date, required: true },
-    password: { type: String, required: false }
+    password: { type: String, required: false },
+    image: { type: String, required: false }
 });
 
 module.exports = mongoose.model('School', schoolSchema);

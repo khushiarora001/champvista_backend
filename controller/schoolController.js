@@ -1,7 +1,19 @@
 const School = require('../model/school');
+const multer = require('multer');
+// Multer storage configuration for handling image upload
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');  // Folder to save the uploaded files
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}_${file.originalname}`);  // Naming the file
+    },
+});
 
-// POST /school/add
-exports.addSchool = async (req, res) => {
+const upload = multer({ storage });  // Multer middleware
+
+// POST /school/add with image upload
+exports.addSchool = upload.single('image'), async (req, res) => {
     try {
         // Check if the user role is Admin
         if (req.user.role !== 'Admin') {
@@ -15,7 +27,8 @@ exports.addSchool = async (req, res) => {
             affiliationNumber,
             address,
             city,
-            state, password,
+            state,
+            password,
             pincode,
             googleMapLink,
             schoolEmail,
@@ -30,7 +43,8 @@ exports.addSchool = async (req, res) => {
             !affiliationNumber ||
             !address ||
             !city ||
-            !state || !password ||
+            !state ||
+            !password ||
             !pincode ||
             !googleMapLink ||
             !schoolEmail ||
@@ -45,6 +59,9 @@ exports.addSchool = async (req, res) => {
             return res.status(400).json({ message: 'Invalid plan expiry date' });
         }
 
+        // Handle image upload
+        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;  // Construct the image URL
+
         const school = new School({
             name,
             contact,
@@ -57,6 +74,7 @@ exports.addSchool = async (req, res) => {
             googleMapLink,
             schoolEmail,
             password,
+            image: imageUrl,  // Store image URL in the database
             planExpiry: expiryDate,
         });
 
@@ -72,8 +90,6 @@ exports.addSchool = async (req, res) => {
         res.status(500).json({ message: 'Failed to add school' });
     }
 };
-
-
 // GET /school/search
 exports.searchSchool = async (req, res) => {
     try {
@@ -179,21 +195,55 @@ exports.uploadSchoolLogo = async (req, res) => {
 // Correct Controller Method for Listing Schools
 exports.getSchoolList = async (req, res) => {
     try {
-        const { filter } = req.query; // Get filter from query params
+        const { filter } = req.query;
 
-        // Base query
         let query = {};
 
-        // Apply filter based on the query parameter
         if (filter === "active") {
-            query.planExpiry = { $gte: new Date() }; // Schools with future expiry dates
+            query.planExpiry = { $gte: new Date() };
         } else if (filter === "expired") {
-            query.planExpiry = { $lt: new Date() }; // Schools with past expiry dates
+            query.planExpiry = { $lt: new Date() };
         }
-        // Fetch filtered data
-        const schools = await School.find(query).select(
-            "name contact website affiliationNumber address city state pincode googleMapLink schoolEmail password planExpiry"
-        );
+
+        const schools = await School.aggregate([
+            {
+                $match: query
+            },
+            {
+                $lookup: {
+                    from: 'teachers',  // Assuming 'teachers' is the collection name for Teacher model
+                    localField: '_id',
+                    foreignField: 'schoolId',  // Ensure the Teacher model has a reference to School
+                    as: 'teachers'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'students',  // Assuming 'students' is the collection name for Student model
+                    localField: '_id',
+                    foreignField: 'schoolId',
+                    as: 'students'
+                }
+            },
+            {
+                $project: {
+                    name: 1,
+                    contact: 1,
+                    website: 1,
+                    affiliationNumber: 1,
+                    address: 1,
+                    city: 1,
+                    state: 1,
+                    pincode: 1,
+                    googleMapLink: 1,
+                    schoolEmail: 1,
+                    planExpiry: 1,
+                    image: 1,
+                    teacherCount: { $size: '$teachers' },
+                    studentCount: { $size: '$students' }
+                }
+            }
+        ]);
 
         res.status(200).json({
             schools,
