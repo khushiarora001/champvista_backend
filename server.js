@@ -7,27 +7,13 @@ const connectDB = require('./config/db');
 const app = express();
 
 
-app.use(cors({
-    origin: "*",  // ✅ Sirf frontend ka URL allow karein
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'], // ✅ Extra headers hata dein
-    credentials: true,
-}));
+const corsOptions = {
+    origin: "*", // Change to your Flutter web URL
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization",
+};
+app.use(cors(corsOptions));
 
-// ✅ Preflight request ka sahi response
-app.options('*', (req, res) => {
-    res.header("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
-    res.sendStatus(204);
-});
-
-// ✅ Route Example (Ensure headers are sent properly)
-app.post('/auth/login', (req, res) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.json({ message: "Login Successful" });
-});
 
 // Load environment variables
 dotenv.config();
