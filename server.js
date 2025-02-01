@@ -8,13 +8,19 @@ const app = express();
 
 
 const corsOptions = {
-    origin: "*", // Change to your Flutter web URL
-    methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
+    origin: "https://www-champvista-com.onrender.com", // Change to your Flutter web URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
 };
 app.use(cors(corsOptions));
-
-app.options("*", cors(corsOptions));
+app.options("*", (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "https://www-champvista-com.onrender.com");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true"); // Important for auth
+    res.status(204).end();
+});
 // Load environment variables
 dotenv.config();
 
