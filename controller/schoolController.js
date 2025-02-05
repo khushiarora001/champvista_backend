@@ -1,25 +1,41 @@
-const School = require('../model/school');
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 const multer = require('multer');
-// Multer storage configuration for handling image upload
+const School = require('../model/school');
+
+const router = express.Router();
+
+// Middleware for parsing form-data and JSON with increased limits
+router.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
+router.use(bodyParser.json({ limit: '100mb' }));
+
+// Multer setup for file uploads
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');  // Folder to save the uploaded files
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}_${file.originalname}`);  // Naming the file
-    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `school_${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
 });
 
-const upload = multer({ storage });  // Multer middleware
+const upload = multer({
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB file size limit
+});
 
-// POST /school/add with image upload
-exports.addSchool = upload.single('image'), async (req, res) => {
+// API Route to add a school
+
+
+exports.addSchool = async (req, res) => {
     try {
-        // Check if the user role is Admin
-        if (req.user.role !== 'Admin') {
-            return res.status(403).json({ message: 'Access denied: Admins only' });
-        }
-
         const {
             name,
             contact,
@@ -33,35 +49,22 @@ exports.addSchool = upload.single('image'), async (req, res) => {
             googleMapLink,
             schoolEmail,
             planExpiry,
+            image, // Base64 image data
         } = req.body;
 
-        // Check if all required fields are provided
-        if (
-            !name ||
-            !contact ||
-            !website ||
-            !affiliationNumber ||
-            !address ||
-            !city ||
-            !state ||
-            !password ||
-            !pincode ||
-            !googleMapLink ||
-            !schoolEmail ||
-            !planExpiry
-        ) {
-            return res.status(400).json({ message: 'Missing required fields' });
+        // Log the image data to check if it's coming through
+        console.log("Received image data:", image);
+
+        // Handle base64 image
+        let imageUrl = null;
+        if (image) {
+            const imagePath = path.join(__dirname, '../uploads', `school_${Date.now()}.jpg`);
+            console.log("Saving image to path:", imagePath);
+            imageUrl = `/uploads/${path.basename(imagePath)}`;
+            saveBase64Image(image, imagePath); // Save base64 image to disk
         }
 
-        // Validate the plan expiry date
-        const expiryDate = new Date(planExpiry);
-        if (isNaN(expiryDate.getTime())) {
-            return res.status(400).json({ message: 'Invalid plan expiry date' });
-        }
-
-        // Handle image upload
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;  // Construct the image URL
-
+        // Create new school record and save it to the database
         const school = new School({
             name,
             contact,
@@ -74,8 +77,8 @@ exports.addSchool = upload.single('image'), async (req, res) => {
             googleMapLink,
             schoolEmail,
             password,
-            image: imageUrl,  // Store image URL in the database
-            planExpiry: expiryDate,
+            planExpiry: new Date(planExpiry),
+            image: imageUrl,
         });
 
         await school.save();
@@ -84,33 +87,20 @@ exports.addSchool = upload.single('image'), async (req, res) => {
             success: true,
             schoolId: school._id,
             message: 'School added successfully',
+            imageUrl, // This should now return the correct image URL
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to add school' });
     }
 };
-// GET /school/search
-exports.searchSchool = async (req, res) => {
-    try {
-        const { query } = req.query;
 
-        const schoolList = await School.find({
-            $or: [
-                { name: { $regex: query, $options: 'i' } },
-                { address: { $regex: query, $options: 'i' } },
-            ],
-        });
-
-        res.status(200).json({
-            schoolList,
-            message: 'Schools fetched successfully',
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to search schools' });
-    }
-};
+// Function to save base64 image
+function saveBase64Image(base64Data, filePath) {
+    const base64Image = base64Data.split(';base64,').pop();
+    const buffer = Buffer.from(base64Image, 'base64');
+    fs.writeFileSync(filePath, buffer);
+}
 
 // PUT /school/update/:id
 exports.updateSchoolDetails = async (req, res) => {
@@ -133,13 +123,9 @@ exports.updateSchoolDetails = async (req, res) => {
         res.status(500).json({ message: 'Failed to update school details' });
     }
 };
+
 exports.deleteSchool = async (req, res) => {
     try {
-        // Check if the user role is Admin
-        if (req.user.role !== 'Admin') {
-            return res.status(403).json({ message: 'Access denied: Admins only' });
-        }
-
         const { id } = req.params;
 
         const school = await School.findByIdAndDelete(id);
@@ -157,8 +143,6 @@ exports.deleteSchool = async (req, res) => {
         res.status(500).json({ message: 'Failed to delete school' });
     }
 };
-
-// GET /school/:id
 
 // POST /school/upload-logo
 exports.uploadSchoolLogo = async (req, res) => {
@@ -191,8 +175,8 @@ exports.uploadSchoolLogo = async (req, res) => {
         res.status(500).json({ message: 'Failed to upload school logo' });
     }
 };
+
 // Controller method to get the list of schools
-// Correct Controller Method for Listing Schools
 exports.getSchoolList = async (req, res) => {
     try {
         const { filter } = req.query;
@@ -211,15 +195,15 @@ exports.getSchoolList = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'teachers',  // Assuming 'teachers' is the collection name for Teacher model
+                    from: 'teachers',
                     localField: '_id',
-                    foreignField: 'schoolId',  // Ensure the Teacher model has a reference to School
+                    foreignField: 'schoolId',
                     as: 'teachers'
                 }
             },
             {
                 $lookup: {
-                    from: 'students',  // Assuming 'students' is the collection name for Student model
+                    from: 'students',
                     localField: '_id',
                     foreignField: 'schoolId',
                     as: 'students'
@@ -235,10 +219,11 @@ exports.getSchoolList = async (req, res) => {
                     city: 1,
                     state: 1,
                     pincode: 1,
+                    password: 1,
                     googleMapLink: 1,
                     schoolEmail: 1,
                     planExpiry: 1,
-                    image: 1,
+                    imageUrl: "$image",
                     teacherCount: { $size: '$teachers' },
                     studentCount: { $size: '$students' }
                 }
@@ -254,8 +239,6 @@ exports.getSchoolList = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch schools' });
     }
 };
-
-
 
 // PUT /school/update-plan
 exports.updatePlanExpiry = async (req, res) => {

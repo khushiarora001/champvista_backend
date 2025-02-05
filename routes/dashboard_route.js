@@ -5,7 +5,8 @@ const {
     getTotalInstitutesSummary,
     getActiveInstitutes,
     getTotalUsers,
-    getTeachersOnLeave
+    getTeachersOnLeave,
+    getSchoolDashboard
 } = require('../controller/dashboardController');
 const authenticate = require('../middleware/authenticate'); // Middleware for JWT Authentication
 
@@ -15,5 +16,5 @@ router.get('/institutes', authenticate, getTotalInstitutesSummary);
 router.get('/active', authenticate, getActiveInstitutes);
 router.get('/users', authenticate, getTotalUsers);
 router.get('/teachers-leave', authenticate, getTeachersOnLeave);
-
+router.get("/getSchoolDashboard", authenticate, getSchoolDashboard)
 module.exports = router;

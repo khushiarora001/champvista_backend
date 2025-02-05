@@ -6,7 +6,8 @@ const {
     deleteClass,
     viewTimetable,
     viewAttendance,
-    assignSubjects
+    assignSubjects,
+    getClassList
 } = require('../controller/classController');
 const authenticate = require('../middleware/authenticate');
 
@@ -17,5 +18,5 @@ router.delete('/delete/:id', authenticate, deleteClass);
 router.get('/timetable/:id', authenticate, viewTimetable);
 router.get('/attendance/:id', authenticate, viewAttendance);
 router.post('/assign-subject', authenticate, assignSubjects);
-
+router.get('/classes/:schoolEmail', authenticate, getClassList);
 module.exports = router;

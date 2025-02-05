@@ -1,29 +1,41 @@
 const mongoose = require('mongoose');
 
+// Leave request schema
 const leaveSchema = new mongoose.Schema({
-    teacherId: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Teacher',
         required: true,
+        ref: 'User'
     },
-    leaveStartDate: {
+    fromDate: {
         type: Date,
-        required: true,
+        required: true
     },
-    leaveEndDate: {
+    toDate: {
         type: Date,
-        required: true,
+        required: true
     },
     reason: {
         type: String,
-        required: true,
+        required: true
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending',
+        enum: ['pending', 'approved', 'rejected', 'cancelled'],
+        default: 'pending'
     },
-}, { timestamps: true });
+    days: {
+        type: Number,  // Optional: days of leave
+    },
+    schoolEmail: {
+        type: String, // School email to notify about the leave
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
 
 const Leave = mongoose.model('Leave', leaveSchema);
 

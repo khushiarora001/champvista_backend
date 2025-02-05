@@ -118,3 +118,43 @@ exports.getTeachersOnLeave = async (req, res) => {
         res.status(500).json({ message: 'Error fetching teachers on leave' });
     }
 };
+exports.getSchoolDashboard = async (req, res) => {
+    try {
+        const { schoolId } = req.query;
+
+        if (!schoolId) {
+            return res.status(400).json({ message: "School ID is required" });
+        }
+
+        // Get school details
+        const school = await School.findById(schoolId);
+        if (!school) {
+            return res.status(404).json({ message: "School not found" });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Count total students and teachers for this school
+        const totalStudents = await User.countDocuments({ role: 'student', school: schoolId });
+        const totalTeachers = await User.countDocuments({ role: 'teacher', school: schoolId });
+
+        // Check plan expiry status
+        const isPlanActive = school.planExpiry >= today;
+
+        res.status(200).json({
+            schoolName: school.name,
+            totalStudents,
+            totalTeachers,
+            planExpiryDate: school.planExpiry,
+            planStatus: isPlanActive ? "Active" : "Expired",
+            message: "School dashboard data fetched successfully"
+        });
+    } catch (error) {
+        console.error("Error fetching school dashboard data:", error);
+        res.status(500).json({
+            message: "Error fetching school dashboard data",
+            error: error.message,
+        });
+    }
+};

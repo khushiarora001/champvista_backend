@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 
 // Initialize Express App
@@ -16,8 +17,11 @@ connectDB();
 const corsOptions = {
     origin: function (origin, callback) {
         const allowedOrigins = [
-            "https://www-champvista-com.onrender.com", // Flutter Web URL
-            // Add other domains if required in the future
+            "http://localhost:5000",
+            "http://localhost:51113",
+            "http://localhost:3000",  // ✅ React/Flutter Web (Local)
+            "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
+            "https://www-champvista-com.onrender.com",  // ✅ Production URL
         ];
         if (allowedOrigins.includes(origin) || !origin) {
             callback(null, true);
@@ -35,7 +39,7 @@ app.use(cors(corsOptions));
 
 // Preflight OPTIONS request handling
 app.options('*', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://www-champvista-com.onrender.com');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true'); // Important for Auth token
@@ -45,15 +49,19 @@ app.options('*', (req, res) => {
 // ✅ JSON Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));  // For form-urlencoded data
-
+const listEndpoints = require('express-list-endpoints');
 // Routes
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/auth', require('./routes/authroute'));
 app.use('/dashboard', require('./routes/dashboard_route'));
 app.use('/school', require('./routes/schoolroute'));
+app.use('/class', require('./routes/class_routes'));
+console.log(listEndpoints(app));
 app.use('/teacher', require('./routes/teacher_routes'));
 app.use('/student', require('./routes/studentroute'));
 app.use('/calendar', require('./routes/calendar_route'));
-app.use('/class', require('./routes/class_routes'));
+
+
 app.use('/leave', require('./routes/leave_routes'));
 
 // Basic Route

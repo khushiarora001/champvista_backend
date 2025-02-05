@@ -2,18 +2,21 @@ const express = require('express');
 const router = express.Router();
 const {
     addTeacher,
-    updateTeacherDetails,
-    getTeacherDetails,
-    applyTeacherLeave,
-    updateLeaveStatus,
+    getTeacherBySchoolEmail,
 } = require('../controller/teacherController');
 const authenticate = require('../middleware/authenticate');
 
-// Routes
-router.post('/add', authenticate, addTeacher);
-router.put('/update/:id', authenticate, updateTeacherDetails);
-router.get('/:id', authenticate, getTeacherDetails);
-router.post('/apply-leave', authenticate, applyTeacherLeave);
-router.put('/leave-status', authenticate, updateLeaveStatus);
+// Add a teacher (Single or Multiple)
+router.post('/add/teacher', authenticate, addTeacher);
+
+// Get teacher by school email
+router.get('/school/:schoolEmail', authenticate, getTeacherBySchoolEmail);
+
+// Get teacher by ID
+
+
+// Update teacher details by school mail
+
+
 
 module.exports = router;
