@@ -18,7 +18,7 @@ const corsOptions = {
     origin: function (origin, callback) {
         const allowedOrigins = [
             "http://localhost:5000",
-            "http://localhost:51113",
+            "http://localhost:52303",
             "http://localhost:3000",  // ✅ React/Flutter Web (Local)
             "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
             "https://www-champvista-com.onrender.com",  // ✅ Production URL

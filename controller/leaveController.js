@@ -78,7 +78,7 @@ exports.manageLeave = async (req, res) => {
 // GET /leave/requests
 exports.getLeaveRequestList = async (req, res) => {
     try {
-        const { status, schoolEmail, fromDate, toDate, page = 1, limit = 10 } = req.query;
+        const { status, schoolEmail, fromDate, toDate, page = 1, limit = 10, userId } = req.query;
 
         // Build the query object based on optional filters
         let filter = {};
@@ -96,14 +96,19 @@ exports.getLeaveRequestList = async (req, res) => {
             filter.toDate = { $lte: new Date(toDate) }; // Filter by toDate
         }
 
+        if (userId) {
+            filter.userId = userId; // Filter by userId to get only the leave requests of a specific user
+        }
+
         // Pagination
         const skip = (page - 1) * limit;
 
-        // Find leaves based on filter and pagination
+        // Find leaves based on filter and pagination, and populate the user data
         const leaves = await Leave.find(filter)
             .skip(skip)
             .limit(Number(limit))
-            .sort({ fromDate: -1 }); // Sort by fromDate descending (newest first)
+            .sort({ fromDate: -1 }) // Sort by fromDate descending (newest first)
+            .populate('userId', 'name email role phone'); // Populate the user data (you can adjust which fields you want from the user model)
 
         const totalLeaves = await Leave.countDocuments(filter); // Get the total count for pagination
 

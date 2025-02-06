@@ -3,9 +3,12 @@ const jwt = require('jsonwebtoken');
 const User = require('../model/user');
 
 // Signup Route
+
+
+// Signup Route
 exports.signup = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -16,8 +19,14 @@ exports.signup = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
-        const user = new User({ name, email, password: hashedPassword, role });
+        // Create new user with phone number
+        const user = new User({
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            phone // Include phone number
+        });
         await user.save();
 
         res.status(201).json({ success: true, userId: user._id });
@@ -44,6 +53,8 @@ exports.login = async (req, res) => {
         }
 
         const user = await User.findOne({ email });
+
+        console.log("User fetched:", user);
         if (!user) {
             return res.status(404).json({
                 success: 0,
@@ -63,14 +74,23 @@ exports.login = async (req, res) => {
         // Generate JWT Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.json({
+        const response = {
             success: 1,
             userRole: user.role,
             id: user.id,
             email: user.email,
+            phone: user.phone,  // Include phone in the login response
             message: 'Login successful',
             token,
-        });
+        };
+
+        // Include schoolId if role is 'School'
+        if (user.role === 'School') {
+            response.schoolId = user.schoolId; // Assuming schoolId is a field in the User model
+        }
+
+        res.json(response);
+
     } catch (error) {
         console.error("🔥 Login Error:", error);
         res.status(500).json({
@@ -80,6 +100,7 @@ exports.login = async (req, res) => {
         });
     }
 };
+
 
 exports.changePassword = async (req, res) => {
     try {

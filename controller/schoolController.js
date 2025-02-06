@@ -33,7 +33,6 @@ const upload = multer({
 
 // API Route to add a school
 
-
 exports.addSchool = async (req, res) => {
     try {
         const {
@@ -49,19 +48,20 @@ exports.addSchool = async (req, res) => {
             googleMapLink,
             schoolEmail,
             planExpiry,
-            image, // Base64 image data
+            imageUrl, // Base64 image data
         } = req.body;
 
         // Log the image data to check if it's coming through
-        console.log("Received image data:", image);
+        console.log("Received image data:", imageUrl);
+
+        let savedImageUrl = imageUrl; // New variable for the processed image URL
 
         // Handle base64 image
-        let imageUrl = null;
-        if (image) {
+        if (imageUrl) {
             const imagePath = path.join(__dirname, '../uploads', `school_${Date.now()}.jpg`);
             console.log("Saving image to path:", imagePath);
-            imageUrl = `/uploads/${path.basename(imagePath)}`;
-            saveBase64Image(image, imagePath); // Save base64 image to disk
+            saveBase64Image(imageUrl, imagePath); // Save base64 image to disk
+            savedImageUrl = `/uploads/${path.basename(imagePath)}`;
         }
 
         // Create new school record and save it to the database
@@ -78,7 +78,7 @@ exports.addSchool = async (req, res) => {
             schoolEmail,
             password,
             planExpiry: new Date(planExpiry),
-            image: imageUrl,
+            imageUrl: savedImageUrl, // Use the updated image URL
         });
 
         await school.save();
@@ -87,7 +87,7 @@ exports.addSchool = async (req, res) => {
             success: true,
             schoolId: school._id,
             message: 'School added successfully',
-            imageUrl, // This should now return the correct image URL
+            imageUrl: savedImageUrl, // Return the correct image URL
         });
     } catch (error) {
         console.error(error);
@@ -223,7 +223,7 @@ exports.getSchoolList = async (req, res) => {
                     googleMapLink: 1,
                     schoolEmail: 1,
                     planExpiry: 1,
-                    imageUrl: "$image",
+                    imageUrl: "$imageUrl",
                     teacherCount: { $size: '$teachers' },
                     studentCount: { $size: '$students' }
                 }
