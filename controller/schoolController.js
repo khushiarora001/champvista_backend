@@ -250,8 +250,8 @@ exports.getSchoolList = async (req, res) => {
                     schoolEmail: 1,
                     planExpiry: 1,
                     imageUrl: "$imageUrl",
-                    teacherCount: { $size: '$teachers' },
-                    studentCount: { $size: '$students' },
+                    teacherCount: 0,
+                    studentCount: 0,
                     totalTeachersCreated: { $sum: '$teachers.createdBySchool' },  // Counting teachers created by this school
                     totalStudentsCreated: { $sum: '$students.createdBySchool' },  // Counting students created by this school
                 }
