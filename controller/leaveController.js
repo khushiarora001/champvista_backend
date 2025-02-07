@@ -76,43 +76,39 @@ exports.manageLeave = async (req, res) => {
 };
 
 // GET /leave/requests
+
+
 exports.getLeaveRequestList = async (req, res) => {
     try {
         const { status, schoolEmail, fromDate, toDate, page = 1, limit = 10, userId } = req.query;
 
-        // Build the query object based on optional filters
+        // Build the query object
         let filter = {};
 
-        if (status) {
-            filter.status = status; // Filter by leave status (e.g., 'approved', 'pending', 'rejected', etc.)
-        }
-
-        if (schoolEmail) {
-            filter.schoolEmail = schoolEmail; // Filter by schoolEmail
-        }
-
+        if (status) filter.status = status;
+        if (schoolEmail) filter.schoolEmail = schoolEmail;
         if (fromDate && toDate) {
-            filter.fromDate = { $gte: new Date(fromDate) }; // Filter by fromDate
-            filter.toDate = { $lte: new Date(toDate) }; // Filter by toDate
+            filter.fromDate = { $gte: new Date(fromDate) };
+            filter.toDate = { $lte: new Date(toDate) };
         }
 
+        // Convert userId to ObjectId only if it's provided
         if (userId) {
-            filter.userId = userId; // Filter by userId to get only the leave requests of a specific user
+            filter.userId = new mongoose.Types.ObjectId(userId);
         }
 
         // Pagination
         const skip = (page - 1) * limit;
 
-        // Find leaves based on filter and pagination, and populate the user data
+        // Find leaves and populate user data
         const leaves = await Leave.find(filter)
             .skip(skip)
             .limit(Number(limit))
-            .sort({ fromDate: -1 }) // Sort by fromDate descending (newest first)
-            .populate('userId', 'name email role phone'); // Populate the user data (you can adjust which fields you want from the user model)
+            .sort({ fromDate: -1 })
+            .populate('userId', 'name email role phone'); // Populate user details
 
-        const totalLeaves = await Leave.countDocuments(filter); // Get the total count for pagination
+        const totalLeaves = await Leave.countDocuments(filter);
 
-        // Return the list of leave requests along with pagination info
         res.status(200).json({
             success: true,
             totalLeaves,
@@ -125,6 +121,7 @@ exports.getLeaveRequestList = async (req, res) => {
         res.status(500).json({ message: 'Failed to retrieve leave requests', error: error.message });
     }
 };
+
 
 
 

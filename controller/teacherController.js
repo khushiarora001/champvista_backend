@@ -1,5 +1,4 @@
-const Teacher = require('../model/teacher');
-const School = require('../model/school')
+
 // Utility function to validate teacher data
 const validateTeacher = (teacher) => {
     const missingFields = [];
@@ -15,63 +14,91 @@ const validateTeacher = (teacher) => {
 
 
 // POST /teacher/add
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const Teacher = require('../model/teacher');
+const School = require('../model/school');
+const User = require('../model/user');
+
+// Validate teacher data (customize as needed)
+
+
+// Ensure the correct path to your School model
+
 exports.addTeacher = async (req, res) => {
     try {
-        const { email, teachers } = req.body;
+        const { schoolEmail, teachers } = req.body;
 
-        // Validate input
-        if (!email) {
-            return res.status(400).json({ message: 'Email is required to add teachers.' });
+        if (!schoolEmail) {
+            return res.status(400).json({ message: 'School Email is required to add teachers.' });
         }
         if (!Array.isArray(teachers) || teachers.length === 0) {
             return res.status(400).json({ message: 'Invalid input. Expected a non-empty array of teachers.' });
         }
-        const school = await School.findOne({ schoolEmail: email.trim() }); // Normalize and match
-        console.log('School Found:', school); // Log the found school (null if not found)
 
+        // Find the school by email
+        const school = await School.findOne({ schoolEmail: schoolEmail.trim() });
         if (!school) {
             return res.status(404).json({ message: 'School with the provided email is not registered.' });
-
         }
 
-        // Validate individual teacher objects
-        const invalidTeachers = teachers.map((teacher, index) => ({
-            index,
-            missingFields: validateTeacher(teacher),
-        })).filter((teacher) => teacher.missingFields.length > 0);
+        const teachersDataWithSchoolEmail = teachers.map(teacher => ({
+            ...teacher,
+            schoolEmail: schoolEmail,
+        }));
 
-        if (invalidTeachers.length > 0) {
-            return res.status(400).json({
-                message: 'Some teachers have missing required fields.',
-                invalidTeachers,
+        // Insert teachers into Teacher collection
+        const addedTeachers = await Teacher.insertMany(teachersDataWithSchoolEmail, { ordered: false });
+
+        const teacherUsers = [];
+
+        for (const teacher of addedTeachers) {
+            // Hash password
+            const hashedPassword = await bcrypt.hash(teacher.password || 'defaultPassword123', 10);
+
+            // Create teacher user
+            const teacherUser = new User({
+                name: teacher.name,
+                email: teacher.email,
+                password: hashedPassword,
+                role: 'Teacher',  // Assigning the "Teacher" role
+                schoolEmail: schoolEmail,
+                phone: teacher.phone,
             });
-        }
+            await School.updateOne(
+                { schoolEmail: schoolEmail },
+                { $inc: { teacherCount: addedTeachers.length } } // ✅ Increment teacher count
+            );
 
-        // Add school email to each teacher and insert in batches
-        const teachersDataWithSchoolEmail = teachers.map(teacher => ({ ...teacher, schoolEmail: email }));
-        const BATCH_SIZE = 100;
-        const totalTeachers = teachersDataWithSchoolEmail.length;
-        let addedTeachers = [];
+            await teacherUser.save();
 
-        for (let i = 0; i < totalTeachers; i += BATCH_SIZE) {
-            const batch = teachersDataWithSchoolEmail.slice(i, i + BATCH_SIZE);
-            const result = await Teacher.insertMany(batch, { ordered: false }); // 'ordered: false' skips duplicates
-            addedTeachers = addedTeachers.concat(result);
+            // Generate JWT Token
+            const token = jwt.sign(
+                {
+                    id: teacherUser._id,
+                    role: teacherUser.role,
+                    email: teacherUser.email,
+                    schoolEmail: teacherUser.schoolEmail,
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+
+            teacherUsers.push({ teacherUser, token });
         }
 
         res.status(201).json({
             success: true,
-            message: `${addedTeachers.length} teachers added successfully`,
+            message: `${addedTeachers.length} teachers added and signed up as "Teacher" role successfully`,
             teachersAdded: addedTeachers,
+            teacherUsers,
         });
     } catch (error) {
         console.error('Error adding teachers:', error.message);
-        if (error.code === 11000) {
-            return res.status(409).json({ message: 'Duplicate entry detected', error: error.message });
-        }
         res.status(500).json({ message: 'Failed to add teachers', error: error.message });
     }
 };
+
 
 
 // GET /teacher/:schoolId

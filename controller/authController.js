@@ -1,14 +1,11 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../model/user');
-
-// Signup Route
-
-
+const School = require('../model/school')
 // Signup Route
 exports.signup = async (req, res) => {
     try {
-        const { name, email, password, role, phone } = req.body;
+        const { name, email, password, role, phone, schoolId, assignedBy } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -16,20 +13,83 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // Only one Admin can exist
+        if (role === 'Admin') {
+            const existingAdmin = await User.findOne({ role: 'Admin' });
+            if (existingAdmin) {
+                return res.status(400).json({ message: 'Only one admin can exist' });
+            }
+        }
+
+        // School Role: Can sign up only if an Admin exists
+        if (role === 'School') {
+            const adminExists = await User.findOne({ role: 'Admin' });
+            if (!adminExists) {
+                return res.status(400).json({ message: 'A School can only be created after an Admin is registered' });
+            }
+        }
+
+        // Teacher Role: Can sign up only after a school is created
+        if (role === 'Teacher') {
+            if (!schoolId) {
+                return res.status(400).json({ message: 'School ID is required for Teacher registration' });
+            }
+
+            // Query the School collection to verify if the school exists
+            const schoolExists = await School.findById(schoolId);
+            if (!schoolExists) {
+                return res.status(400).json({ message: 'School not found' });
+            }
+        }
+
+
+        // Student Role: Can sign up only if assigned by a School/Teacher
+        if (role === 'Student') {
+            if (!assignedBy) {
+                return res.status(400).json({ message: 'Student must be assigned by a School/Teacher' });
+            }
+            const assignedByUser = await User.findOne({ _id: assignedBy, role: { $in: ['School', 'Teacher'] } });
+            if (!assignedByUser) {
+                return res.status(400).json({ message: 'Invalid assigner (must be a School or Teacher)' });
+            }
+        }
+
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user with phone number
+        // Create new user
         const user = new User({
             name,
             email,
             password: hashedPassword,
             role,
-            phone // Include phone number
+            phone,
+            schoolId,      // Store schoolId for teacher and student roles
+            assignedBy     // Store the person assigning the student (for student role)
         });
         await user.save();
 
-        res.status(201).json({ success: true, userId: user._id });
+        // Generate JWT Token
+        const token = jwt.sign(
+            {
+                id: user._id,
+                role: user.role,
+                email: user.email,
+                phone: user.phone,
+                schoolId: user.schoolId, // Optional, based on role
+                assignedBy: user.assignedBy // Optional, for student role
+            },
+            process.env.JWT_SECRET, // Secret key
+            { expiresIn: '1h' }    // Token expiration time
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'User signed up successfully',
+            userId: user._id,
+            role: user.role,
+            token,  // Provide the token in the response
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error during signup' });
@@ -76,21 +136,28 @@ exports.login = async (req, res) => {
 
         const response = {
             success: 1,
-            userRole: user.role,
-            id: user.id,
+            userId: user._id,
             email: user.email,
-            phone: user.phone,  // Include phone in the login response
+            role: user.role,    // User's role (Admin, School, Teacher, Student)
+            phone: user.phone,
+
+            // User's phone number
+            token,               // JWT Token
             message: 'Login successful',
-            token,
         };
 
-        // Include schoolId if role is 'School'
-        if (user.role === 'School') {
-            response.schoolId = user.schoolId; // Assuming schoolId is a field in the User model
+        // If the user is a School, include the schoolId
+        if (user.role === "School") {
+            response.schoolId = user.schoolId;
+        } else if (user.role === "Teacher") {
+            response.teacherId = user._id;
+            response.schoolId = user.schoolId;
+        } else if (user.role === "Student") {
+            response.schoolId = user.schoolId;
+            response.assignedBy = user.assignedBy;
         }
 
         res.json(response);
-
     } catch (error) {
         console.error("🔥 Login Error:", error);
         res.status(500).json({
@@ -100,6 +167,7 @@ exports.login = async (req, res) => {
         });
     }
 };
+
 
 
 exports.changePassword = async (req, res) => {

@@ -10,7 +10,7 @@ const schoolSchema = new mongoose.Schema({
     state: { type: String, required: true },
     pincode: { type: String, required: true },
     googleMapLink: { type: String, required: false },
-    schoolEmail: { type: String, required: false },
+    schoolEmail: { type: String, required: true },
     planExpiry: { type: Date, required: true },
     password: { type: String, required: false },
     imageUrl: { type: String, required: false }

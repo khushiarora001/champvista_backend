@@ -4,8 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const School = require('../model/school');
-
+const bcrypt = require('bcryptjs');
+const User = require('../model/user')
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 
 // Middleware for parsing form-data and JSON with increased limits
 router.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
@@ -55,6 +57,10 @@ exports.addSchool = async (req, res) => {
         console.log("Received image data:", imageUrl);
 
         let savedImageUrl = imageUrl; // New variable for the processed image URL
+        const existingUser = await User.findOne({ email: schoolEmail });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already exists' });
+        }
 
         // Handle base64 image
         if (imageUrl) {
@@ -83,18 +89,46 @@ exports.addSchool = async (req, res) => {
 
         await school.save();
 
+        // Hash password for the School user
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create the "School" user account
+        const schoolUser = new User({
+            name,
+            email: schoolEmail,
+            password: hashedPassword,
+            role: 'School',
+            schoolId: school._id, // Link user to the school
+            phone: contact, // You can set the contact as phone
+        });
+
+        await schoolUser.save();
+
+        // Generate JWT Token for the School user
+        const token = jwt.sign(
+            {
+                id: schoolUser._id,
+                role: schoolUser.role,
+                email: schoolUser.email,
+                phone: schoolUser.phone,
+                schoolId: schoolUser.schoolId,
+            },
+            process.env.JWT_SECRET, // Secret key
+            { expiresIn: '1h' }    // Token expiration time
+        );
+
         res.status(201).json({
             success: true,
             schoolId: school._id,
-            message: 'School added successfully',
+            message: 'School added and School user account created successfully',
             imageUrl: savedImageUrl, // Return the correct image URL
+            token, // Return JWT Token for authentication
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Failed to add school' });
+        res.status(500).json({ message: 'Failed to add school and create school user' });
     }
 };
-
 // Function to save base64 image
 function saveBase64Image(base64Data, filePath) {
     const base64Image = base64Data.split(';base64,').pop();
@@ -176,7 +210,6 @@ exports.uploadSchoolLogo = async (req, res) => {
     }
 };
 
-// Controller method to get the list of schools
 exports.getSchoolList = async (req, res) => {
     try {
         const { filter } = req.query;
@@ -193,14 +226,7 @@ exports.getSchoolList = async (req, res) => {
             {
                 $match: query
             },
-            {
-                $lookup: {
-                    from: 'teachers',
-                    localField: '_id',
-                    foreignField: 'schoolId',
-                    as: 'teachers'
-                }
-            },
+
             {
                 $lookup: {
                     from: 'students',
@@ -225,7 +251,9 @@ exports.getSchoolList = async (req, res) => {
                     planExpiry: 1,
                     imageUrl: "$imageUrl",
                     teacherCount: { $size: '$teachers' },
-                    studentCount: { $size: '$students' }
+                    studentCount: { $size: '$students' },
+                    totalTeachersCreated: { $sum: '$teachers.createdBySchool' },  // Counting teachers created by this school
+                    totalStudentsCreated: { $sum: '$students.createdBySchool' },  // Counting students created by this school
                 }
             }
         ]);
@@ -239,6 +267,7 @@ exports.getSchoolList = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch schools' });
     }
 };
+
 
 // PUT /school/update-plan
 exports.updatePlanExpiry = async (req, res) => {
