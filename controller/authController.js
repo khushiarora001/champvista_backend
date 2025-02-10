@@ -122,8 +122,13 @@ exports.login = async (req, res) => {
             });
         }
 
+        console.log("🔍 Entered Password:", password);
+        console.log("🔍 Stored Password:", user.password);
+
         // Password Check
         const validPassword = await bcrypt.compare(password, user.password);
+        console.log("Password Match Status:", validPassword);
+
         if (!validPassword) {
             return res.status(401).json({
                 success: 0,
@@ -134,19 +139,18 @@ exports.login = async (req, res) => {
         // Generate JWT Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        const response = {
+        response = {
             success: 1,
             userId: user._id,
             email: user.email,
-            role: user.role,    // User's role (Admin, School, Teacher, Student)
+            role: user.role,
             phone: user.phone,
 
-            // User's phone number
-            token,               // JWT Token
-            message: 'Login successful',
-        };
 
-        // If the user is a School, include the schoolId
+
+            message: 'Login successful',
+            token,
+        };
         if (user.role === "School") {
             response.schoolId = user.schoolId;
         } else if (user.role === "Teacher") {
@@ -156,8 +160,8 @@ exports.login = async (req, res) => {
             response.schoolId = user.schoolId;
             response.assignedBy = user.assignedBy;
         }
-
         res.json(response);
+
     } catch (error) {
         console.error("🔥 Login Error:", error);
         res.status(500).json({
@@ -167,7 +171,6 @@ exports.login = async (req, res) => {
         });
     }
 };
-
 
 
 exports.changePassword = async (req, res) => {

@@ -8,7 +8,8 @@ const bcrypt = require('bcryptjs');
 const User = require('../model/user')
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-
+const Teacher = require('../model/teacher');
+const Students = require('../model/student');
 // Middleware for parsing form-data and JSON with increased limits
 router.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 router.use(bodyParser.json({ limit: '100mb' }));
@@ -137,26 +138,60 @@ function saveBase64Image(base64Data, filePath) {
 }
 
 // PUT /school/update/:id
+
+
+
+
 exports.updateSchoolDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        const updates = req.body;
+        let updates = req.body;
 
-        const school = await School.findByIdAndUpdate(id, updates, { new: true });
-
+        // Fetch the existing school details
+        let school = await School.findById(id);
         if (!school) {
             return res.status(404).json({ message: 'School not found' });
         }
 
+        // If email is updated, check if it's unique
+        if (updates.email && updates.email !== school.email) {
+            const existingSchool = await School.findOne({ email: updates.email });
+            if (existingSchool) {
+                return res.status(400).json({ message: 'Email is already in use' });
+            }
+        }
+
+        // Check if the school has an associated user
+        const user = await User.findOne({ email: school.schoolEmail }); // Fetch user using old emails
+        if (!user) {
+            return res.status(404).json({ message: 'Associated user not found' });
+        }
+
+        // If password is updated, hash it and update in User collection
+        if (updates.password) {
+            const hashedPassword = await bcrypt.hash(updates.password, 10);
+            await User.findByIdAndUpdate(user._id, { password: hashedPassword });
+        }
+
+        // If email is updated, update it in User collection
+        if (updates.email) {
+            await User.findByIdAndUpdate(user._id, { email: updates.email });
+        }
+
+        // Update school details
+        school = await School.findByIdAndUpdate(id, updates, { new: true });
+
         res.status(200).json({
             success: true,
-            message: 'School details updated successfully',
+            message: 'School details and login credentials updated successfully',
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to update school details' });
     }
 };
+
+
 
 exports.deleteSchool = async (req, res) => {
     try {
@@ -211,6 +246,9 @@ exports.uploadSchoolLogo = async (req, res) => {
 };
 
 exports.getSchoolList = async (req, res) => {
+    const totalStudents = await Students.countDocuments();
+    const totalSchools = await School.countDocuments();
+    const totalTeachers = await School.countDocuments();
     try {
         const { filter } = req.query;
 
@@ -223,18 +261,9 @@ exports.getSchoolList = async (req, res) => {
         }
 
         const schools = await School.aggregate([
-            {
-                $match: query
-            },
+            { $match: query },
 
-            {
-                $lookup: {
-                    from: 'students',
-                    localField: '_id',
-                    foreignField: 'schoolId',
-                    as: 'students'
-                }
-            },
+
             {
                 $project: {
                     name: 1,
@@ -250,13 +279,21 @@ exports.getSchoolList = async (req, res) => {
                     schoolEmail: 1,
                     planExpiry: 1,
                     imageUrl: "$imageUrl",
-                    teacherCount: 1,
-                    studentCount: 1,
-                    totalTeachersCreated: { $sum: '$teachers.createdBySchool' },  // Counting teachers created by this school
-                    totalStudentsCreated: { $sum: '$students.createdBySchool' },  // Counting students created by this school
+
                 }
             }
         ]);
+
+        // Fetch student & teacher counts for each school
+        for (let school of schools) {
+            const schoolEmail = school.schoolEmail;
+            const totalStudents = await Students.countDocuments({ schoolEmail: schoolEmail });
+            const totalTeachers = await Teacher.countDocuments({ schoolEmail: schoolEmail });
+
+            school.totalTeachers = totalTeachers;
+            school.totalStudents = totalStudents;
+        }
+
 
         res.status(200).json({
             schools,

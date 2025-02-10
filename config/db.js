@@ -8,7 +8,7 @@ const password = encodeURIComponent("k4TNZMo9WEe81x6j");
 
 const connectDB = async () => {
     try {
-        await mongoose.connect("mongodb+srv://officebackend24:k4TNZMo9WEe81x6j@champvista.g1nqo.mongodb.net/?retryWrites=true&w=majority&appName=ChampVista", {
+        await mongoose.connect(process.env.MONGO_URL, {
             serverSelectionTimeoutMS: 30000, // Wait up to 30 seconds for connection
             socketTimeoutMS: 45000,
 
