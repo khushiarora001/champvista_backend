@@ -14,37 +14,37 @@ dotenv.config();
 connectDB();
 
 // CORS Configuration
-const corsOptions = {
-    origin: function (origin, callback) {
-        const allowedOrigins = [
-            "http://localhost:5000",
-            "http://localhost:60142",
-            "http://localhost:3000",  // ✅ React/Flutter Web (Local)
-            "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
-            "https://www-champvista-com.onrender.com",  // ✅ Production URL
-        ];
-        if (allowedOrigins.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-    credentials: true,  // To allow cookies (Authorization header)
-};
+// const corsOptions = {
+//     // origin: function (origin, callback) {
+//     //     const allowedOrigins = [
+//     //         "http://localhost:5000",
+//     //         "http://localhost:57723",
+//     //         "http://localhost:3000",  // ✅ React/Flutter Web (Local)
+//     //         "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
+//     //         "https://www-champvista-com.onrender.com",  // ✅ Production URL
+//     //     ];
+//     //     if (allowedOrigins.includes(origin) || !origin) {
+//     //         callback(null, true);
+//     //     } else {
+//     //         callback(new Error("Not allowed by CORS"));
+//     //     }
+//     // },
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+//     credentials: true,  // To allow cookies (Authorization header)
+// };
 
 // Use CORS Middleware
-app.use(cors(corsOptions));
+//app.use(cors(corsOptions));
 
 // Preflight OPTIONS request handling
-app.options('*', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true'); // Important for Auth token
-    res.status(204).end();
-});
+// app.options('*', (req, res) => {
+//     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+//     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+//     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true'); // Important for Auth token
+//     res.status(204).end();
+// });
 
 // ✅ JSON Middleware
 app.use(express.json());
