@@ -13,31 +13,31 @@ dotenv.config();
 // Connect to MongoDB
 connectDB();
 
-// CORS Configuration
+////CORS Configuration
 // const corsOptions = {
-//     // origin: function (origin, callback) {
-//     //     const allowedOrigins = [
-//     //         "http://localhost:5000",
-//     //         "http://localhost:57723",
-//     //         "http://localhost:3000",  // ✅ React/Flutter Web (Local)
-//     //         "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
-//     //         "https://www-champvista-com.onrender.com",  // ✅ Production URL
-//     //     ];
-//     //     if (allowedOrigins.includes(origin) || !origin) {
-//     //         callback(null, true);
-//     //     } else {
-//     //         callback(new Error("Not allowed by CORS"));
-//     //     }
-//     // },
+//     origin: function (origin, callback) {
+//         const allowedOrigins = [
+//             "http://localhost:50163",
+//             "http://localhost:57723",
+//             "http://localhost:3000",  // ✅ React/Flutter Web (Local)
+//             "http://127.0.0.1:3000",  // ✅ Alternative localhost IP
+//             "https://www-champvista-com.onrender.com",  // ✅ Production URL
+//         ];
+//         if (allowedOrigins.includes(origin) || !origin) {
+//             callback(null, true);
+//         } else {
+//             callback(new Error("Not allowed by CORS"));
+//         }
+//     },
 //     methods: ["GET", "POST", "PUT", "DELETE"],
 //     allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
 //     credentials: true,  // To allow cookies (Authorization header)
 // };
 
-// Use CORS Middleware
-//app.use(cors(corsOptions));
+// //Use CORS Middleware
+// app.use(cors(corsOptions));
 
-// Preflight OPTIONS request handling
+// //Preflight OPTIONS request handling
 // app.options('*', (req, res) => {
 //     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
 //     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');

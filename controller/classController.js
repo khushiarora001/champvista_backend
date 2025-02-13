@@ -93,18 +93,14 @@ exports.updateClass = async (req, res) => {
 // DELETE /class/delete/:id
 exports.deleteClass = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { schoolId } = req.body;
+        const { id } = req.params; // Extract class ID from URL
 
-        // Ensure schoolId is present
-        if (!schoolId) {
-            return res.status(400).json({ message: 'SchoolId is required' });
-        }
+        // Find and delete the class by ID
+        const deletedClass = await Class.findByIdAndDelete(id);
 
-        // Find and delete the class
-        const deletedClass = await Class.findOneAndDelete({ _id: id, schoolId });
+        // Check if class was found and deleted
         if (!deletedClass) {
-            return res.status(404).json({ message: 'Class not found or belongs to a different school' });
+            return res.status(404).json({ message: 'Class not found' });
         }
 
         res.status(200).json({
@@ -116,6 +112,7 @@ exports.deleteClass = async (req, res) => {
         res.status(500).json({ message: 'Failed to delete class' });
     }
 };
+
 
 // GET /class/timetable/:id
 exports.viewTimetable = async (req, res) => {
@@ -228,6 +225,7 @@ exports.getClassList = async (req, res) => {
         // Format and return the classes
         const formattedClasses = classes.map(classObj => {
             return {
+                id: classObj._id,
                 className: classObj.className,
                 subjects: classObj.subjects,  // Just return the subjects as strings
                 sections: classObj.sections.map(section => ({

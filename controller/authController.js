@@ -137,7 +137,7 @@ exports.login = async (req, res) => {
         }
 
         // Generate JWT Token
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '48h' });
 
         response = {
             success: 1,
@@ -195,6 +195,11 @@ exports.changePassword = async (req, res) => {
         // Update the password in the database
         user.password = hashedPassword;
         await user.save();
+        await School.findOneAndUpdate(
+            { schoolEmail: user.email },  // Ensure the correct field is used
+            { password: newPassword } // Update only relevant fields (optional)
+        );
+
 
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {

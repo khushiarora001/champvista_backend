@@ -146,7 +146,7 @@ exports.updateSchoolDetails = async (req, res) => {
     try {
         const { id } = req.params;
         let updates = req.body;
-
+        console.log(updates);
         // Fetch the existing school details
         let school = await School.findById(id);
         if (!school) {
@@ -174,8 +174,11 @@ exports.updateSchoolDetails = async (req, res) => {
         }
 
         // If email is updated, update it in User collection
-        if (updates.email) {
-            await User.findByIdAndUpdate(user._id, { email: updates.email });
+        if (updates.schoolEmail) {
+            console.log(updates.schoolEmail);
+
+            await User.findByIdAndUpdate(user._id, { email: updates.schoolEmail });
+
         }
 
         // Update school details
