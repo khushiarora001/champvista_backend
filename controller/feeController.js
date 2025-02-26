@@ -1,124 +1,146 @@
 const Fee = require('../model/fee');
 
 // GET /fee/:studentId
-exports.getFeeDetails = async (req, res) => {
+const StudentFee = require('../model/fee');
+const User = require('../model/user');
+
+// Get fee details for all students
+exports.getAllStudentsFeeDetails = async (req, res) => {
     try {
-        const { studentId } = req.params;
-        const feeDetails = await Fee.findOne({ studentId });
+        const { classId, sectionId } = req.query; // 👈 Query parameters extract kar rahe hain
 
-        if (!feeDetails) return res.status(404).json({ message: 'Fee details not found' });
+        let filter = {}; // Empty filter object
 
-        res.status(200).json({
-            success: true,
-            feeDetails
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to fetch fee details' });
-    }
-};
-
-// POST /fee
-exports.addFee = async (req, res) => {
-    try {
-        const { studentId, feeAmount, dueDate } = req.body;
-
-        const existingFee = await Fee.findOne({ studentId });
-        if (existingFee) return res.status(400).json({ message: 'Fee details already exist for this student' });
-
-        const fee = new Fee({
-            studentId,
-            feeAmount,
-            dueDate
-        });
-
-        await fee.save();
-        res.status(200).json({
-            success: true,
-            message: 'Fee details added successfully',
-            fee
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to add fee details' });
-    }
-};
-
-// PUT /fee/payment/:studentId
-exports.makePayment = async (req, res) => {
-    try {
-        const { studentId } = req.params;
-        const { paidAmount } = req.body;
-
-        const fee = await Fee.findOne({ studentId });
-
-        if (!fee) return res.status(404).json({ message: 'Fee details not found' });
-
-        fee.paidAmount += paidAmount;
-        fee.dueAmount = fee.feeAmount - fee.paidAmount;
-
-        // Update payment status based on due amount
-        if (fee.dueAmount === 0) {
-            fee.paymentStatus = 'paid';
-        } else if (new Date() > fee.dueDate && fee.dueAmount > 0) {
-            fee.paymentStatus = 'overdue';
-        } else {
-            fee.paymentStatus = 'pending';
+        if (classId) {
+            filter.classId = classId; // 👈 classId ko filter me add karenge
         }
 
-        fee.updatedAt = Date.now();
+        if (sectionId) {
+            filter.sectionId = sectionId; // 👈 sectionId ko filter me add karenge
+        }
 
-        await fee.save();
+        const fees = await StudentFee.find(filter)
+            .populate("studentId", "name");
+
+        if (!fees.length) {
+            return res.status(404).json({ message: "No student fee records found" });
+        }
 
         res.status(200).json({
             success: true,
-            message: 'Payment made successfully',
-            fee
+            students: fees.map(fee => ({
+                studentId: fee.studentId,
+                name: fee.name,
+                classId: fee.classId,
+                className: fee.className, sectionName: fee.sectionName,
+                sectionId: fee.sectionId,  // 👈 Section ID bhi response me bhej rahe hain
+                schoolId: fee.schoolId,
+                totalFeeAmount: fee.totalFeeAmount,
+                pendingFees: fee.pendingFees,
+                dueDate: fee.dueDate,
+                transactionHistory: fee.transactionHistory
+            }))
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to make payment' });
+        console.error("🔥 Error fetching student fees:", error);
+        res.status(500).json({ message: "Server error while fetching fee details" });
     }
 };
 
-// PUT /fee/update/:studentId
-exports.updateFee = async (req, res) => {
+exports.addClassFee = async (req, res) => {
     try {
-        const { studentId } = req.params;
-        const { feeAmount, dueDate } = req.body;
+        const { classId, schoolId, feeAmount } = req.body;
 
-        const fee = await Fee.findOne({ studentId });
+        if (!classId || !schoolId || !feeAmount) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
 
-        if (!fee) return res.status(404).json({ message: 'Fee details not found' });
+        // Check if fee already exists for the class
+        const existingFee = await Fee.findOne({ classId, schoolId });
+        if (existingFee) {
+            return res.status(400).json({ message: "Fee already set for this class" });
+        }
 
-        fee.feeAmount = feeAmount;
-        fee.dueDate = dueDate;
-        fee.dueAmount = feeAmount - fee.paidAmount;
-        fee.updatedAt = Date.now();
+        const newFee = new Fee({
+            classId,
+            schoolId,
+            feeAmount
+        });
 
-        await fee.save();
+        await newFee.save();
 
-        res.status(200).json({
+        res.status(201).json({
             success: true,
-            message: 'Fee details updated successfully',
-            fee
+            message: "Fee added successfully",
+            feeDetails: newFee
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to update fee details' });
+        console.error("🔥 Error adding fee:", error);
+        res.status(500).json({ message: "Server error while adding fee" });
     }
 };
 
-// GET /fee/all
-exports.getAllFees = async (req, res) => {
+exports.getStudentFeeDetails = async (req, res) => {
     try {
-        const fees = await Fee.find();
+        const { studentEmail } = req.params;
+
+        if (!studentEmail) {
+            return res.status(400).json({ message: "Student Email is required" });
+        }
+
+        const fee = await StudentFee.findOne({ studentEmail }).populate("studentId", "name");
+
+        if (!fee) {
+            return res.status(404).json({ message: "No fee records found for this student" });
+        }
+
         res.status(200).json({
             success: true,
-            fees
+            studentId: fee.studentId,
+            name: fee.name,
+
+            className: fee.className, sectionName: fee.sectionName,
+            classId: fee.classId,
+            schoolId: fee.schoolId,
+            totalFeeAmount: fee.totalFeeAmount,
+            pendingFees: fee.pendingFees,
+            dueDate: fee.dueDate,
+            transactionHistory: fee.transactionHistory
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to fetch fee details' });
+        console.error("🔥 Error fetching student fee details:", error);
+        res.status(500).json({ message: "Server error while fetching student fee details" });
+    }
+};
+// Get fee details for a specific class
+exports.getClassFeeDetails = async (req, res) => {
+    try {
+        const { classId } = req.params;
+
+        if (!classId) {
+            return res.status(400).json({ message: "Class ID is required" });
+        }
+
+        const fees = await StudentFee.find({ classId }).populate("studentId", "name");
+
+        if (!fees.length) {
+            return res.status(404).json({ message: "No fee records found for this class" });
+        }
+
+        res.status(200).json({
+            success: true,
+            classId: classId,
+            students: fees.map(fee => ({
+                studentId: fee.studentId._id,
+                name: fee.studentId.name,
+                totalFeeAmount: fee.totalFeeAmount,
+                pendingFees: fee.pendingFees,
+                dueDate: fee.dueDate,
+                transactionHistory: fee.transactionHistory
+            }))
+        });
+    } catch (error) {
+        console.error("🔥 Error fetching class fee details:", error);
+        res.status(500).json({ message: "Server error while fetching class fee details" });
     }
 };

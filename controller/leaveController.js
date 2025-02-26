@@ -1,73 +1,71 @@
 const Leave = require('../model/leave');
 const User = require('../model/user')
 // PUT /leave/manage/:id
+const mongoose = require('mongoose');
+const Attendance = require('../model/attendence');
+
 exports.manageLeave = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role, action, schoolEmail } = req.body;
+        const { action, remarks, schoolEmail } = req.body;
 
-        // Find user by email, assuming checkRole expects a userId (ObjectId), but we will use the email for validation
-        // To see the role and other data
-
+        // Find the user by email
         const user = await User.findOne({ email: schoolEmail });
-        console.log(user);
         if (!user) {
             return res.status(404).json({ message: 'User not found with this email' });
         }
 
-        // Check if user has the correct role for approve/reject actions
-        const hasPermission = user.role === 'School'; // You can change this based on your role logic
-        if (action === 'approve' || action === 'reject') {
-            if (!hasPermission) {
-                return res.status(403).json({ message: 'You do not have permission to approve or reject leaves' });
-            }
+        // Only "School" role users can approve/reject leaves
+        if ((action === 'approve' || action === 'reject') && user.role !== 'School') {
+            return res.status(403).json({ message: 'You do not have permission to approve or reject leaves' });
         }
 
-        const leave = await Leave.findById(id);
+        // Find the leave request
+        const leave = await Leave.findById(id).populate("userId");
         if (!leave) return res.status(404).json({ message: 'Leave not found' });
 
-        // Handle different actions based on the role and requested action
+        let updatedAttendance = [];
+
         switch (action) {
             case 'approve':
                 if (leave.status !== 'pending') {
-                    return res.status(400).json({ message: 'Leave cannot be approved. It may already be processed.' });
+                    return res.status(400).json({ message: 'Leave already processed' });
                 }
                 leave.status = 'approved';
+
+                // ✅ **Attendance Update Logic**
+                if (leave.userId.role === "Student") {
+                    updatedAttendance = await updateAttendance(leave.userId._id, leave.fromDate, leave.toDate, 'Leave', 'studentId');
+                } else if (leave.userId.role === "Teacher") {
+                    updatedAttendance = await updateAttendance(leave.userId._id, leave.fromDate, leave.toDate, 'Leave', 'teacherId');
+                }
                 break;
 
             case 'reject':
                 if (leave.status !== 'pending') {
-                    return res.status(400).json({ message: 'Leave cannot be rejected. It may already be processed.' });
+                    return res.status(400).json({ message: 'Leave already processed' });
                 }
                 leave.status = 'rejected';
                 break;
 
             case 'cancel':
-                // Cancel can be done at any stage (pending, approved, rejected)
                 leave.status = 'cancelled';
                 break;
 
             default:
                 return res.status(400).json({ message: 'Invalid action' });
+        }if (remarks) {
+            leave.remarks = remarks; // Storing remarks in the leave document
         }
 
-        // Check if the fromDate and toDate are valid
-        if (!leave.fromDate || !leave.toDate) {
-            return res.status(400).json({ message: 'From date and to date are required.' });
-        }
-
-        // Optionally, calculate the number of days off (if not already calculated)
-        if (!leave.days) {
-            const diffTime = Math.abs(new Date(leave.toDate) - new Date(leave.fromDate));
-            leave.days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Convert to days
-        }
 
         await leave.save();
 
         res.status(200).json({
             success: true,
-            message: `Leave application ${action}d successfully`,
-            leaveDetails: leave, // Return updated leave details, including dates
+            message: `Leave ${action}d successfully`,
+            leaveDetails: leave,
+            updatedAttendance: updatedAttendance
         });
     } catch (error) {
         console.error(error);
@@ -75,14 +73,46 @@ exports.manageLeave = async (req, res) => {
     }
 };
 
-// GET /leave/requests
+const updateAttendance = async (userId, fromDate, toDate, status, userField) => {
+    try {
+        const dates = generateDateRange(fromDate, toDate);
+        let updatedRecords = [];
 
+        for (const date of dates) {
+            const attendance = await Attendance.findOneAndUpdate(
+                { [userField]: userId, date },
+                { $set: { status } },
+                { upsert: true, new: true }
+            );
+            updatedRecords.push(attendance);
+        }
+
+        return updatedRecords;
+    } catch (error) {
+        console.error(`Error updating ${userField} attendance:`, error);
+        return [];
+    }
+};
+
+// Function to generate date range between fromDate and toDate
+const generateDateRange = (fromDate, toDate) => {
+    const dates = [];
+    let currentDate = new Date(fromDate);
+    const endDate = new Date(toDate);
+
+    while (currentDate <= endDate) {
+        dates.push(new Date(currentDate).toISOString().split('T')[0]); // Format: YYYY-MM-DD
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dates;
+};
+
+// GET /leave/requests
 
 exports.getLeaveRequestList = async (req, res) => {
     try {
         const { status, schoolEmail, fromDate, toDate, page = 1, limit = 10, userId } = req.query;
 
-        // Build the query object
         let filter = {};
 
         if (status) filter.status = status;
@@ -91,36 +121,37 @@ exports.getLeaveRequestList = async (req, res) => {
             filter.fromDate = { $gte: new Date(fromDate) };
             filter.toDate = { $lte: new Date(toDate) };
         }
-
-        // Convert userId to ObjectId only if it's provided
-        if (userId) {
-            filter.userId = new mongoose.Types.ObjectId(userId);
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            filter.userId = userId;
         }
 
-        // Pagination
-        const skip = (page - 1) * limit;
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * limitNumber;
 
-        // Find leaves and populate user data
+        // Fetch leave requests and populate user details
         const leaves = await Leave.find(filter)
+            .populate("userId", "name email role phone")
             .skip(skip)
-            .limit(Number(limit))
+            .limit(limitNumber)
             .sort({ fromDate: -1 })
-            .populate('userId', 'name email role phone'); // Populate user details
+            .lean(); // Convert to JSON
 
         const totalLeaves = await Leave.countDocuments(filter);
 
         res.status(200).json({
             success: true,
             totalLeaves,
-            page,
-            limit,
-            leaves
+            page: pageNumber,
+            limit: limitNumber,
+            leaves,
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to retrieve leave requests', error: error.message });
+        console.error("Error fetching leave requests:", error);
+        res.status(500).json({ success: false, message: "Failed to retrieve leave requests", error: error.message });
     }
 };
+
 
 
 

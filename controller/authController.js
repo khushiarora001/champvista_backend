@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../model/user');
 const School = require('../model/school')
+const Teacher = require('../model/teacher');
+const Student = require('../model/student');
 // Signup Route
 exports.signup = async (req, res) => {
     try {
@@ -102,6 +104,7 @@ exports.login = async (req, res) => {
         console.log("🔍 Received Headers:", req.headers);
         console.log("🔍 Received Body:", req.body);
 
+
         const { email, password } = req.body;
 
         if (!email || !password) {
@@ -113,6 +116,9 @@ exports.login = async (req, res) => {
         }
 
         const user = await User.findOne({ email });
+        const teacher = await Teacher.findOne({ email });
+        const student = await Student.findOne({ email });
+        console.log("🔍 User Data:", user);
 
         console.log("User fetched:", user);
         if (!user) {
@@ -153,11 +159,16 @@ exports.login = async (req, res) => {
         };
         if (user.role === "School") {
             response.schoolId = user.schoolId;
+            response.schoolEmail = user.schoolEmail;
         } else if (user.role === "Teacher") {
-            response.teacherId = user._id;
+            console.log(teacher);
+            response.teacherId = teacher.id;
+            response.schoolEmail = teacher.schoolEmail;
             response.schoolId = user.schoolId;
         } else if (user.role === "Student") {
             response.schoolId = user.schoolId;
+            response.schoolEmail = student.schoolEmail;
+            response.studentID = student.id;
             response.assignedBy = user.assignedBy;
         }
         res.json(response);

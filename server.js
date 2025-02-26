@@ -56,12 +56,16 @@ app.use('/auth', require('./routes/authroute'));
 app.use('/dashboard', require('./routes/dashboard_route'));
 app.use('/school', require('./routes/schoolroute'));
 app.use('/class', require('./routes/class_routes'));
+
 console.log(listEndpoints(app));
+app.use('/profile', require('./routes/profile_route'))
+
 app.use('/teacher', require('./routes/teacher_routes'));
 app.use('/student', require('./routes/studentroute'));
+console.log(listEndpoints(app));
 app.use('/calendar', require('./routes/calendar_route'));
-
-
+app.use('/fee', require('./routes/fee_route'));
+app.use('/broadcast', require('./routes/broadcast_route'));
 app.use('/leave', require('./routes/leave_routes'));
 
 // Basic Route

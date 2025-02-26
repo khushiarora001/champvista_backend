@@ -1,17 +1,4 @@
 
-// Utility function to validate teacher data
-const validateTeacher = (teacher) => {
-    const missingFields = [];
-    if (!teacher.name) missingFields.push('name');
-    if (!teacher.phone) missingFields.push('phone');
-    if (!teacher.password) missingFields.push('password');
-    if (!teacher.email) missingFields.push('email');
-    if (!teacher.gender) missingFields.push('gender');
-    if (!teacher.subject) missingFields.push('subject');
-    if (!teacher.class) missingFields.push('class');
-    return missingFields;
-};
-
 
 // POST /teacher/add
 const bcrypt = require('bcryptjs');
@@ -21,7 +8,26 @@ const School = require('../model/school');
 const User = require('../model/user');
 
 // Validate teacher data (customize as needed)
+exports.getTeacherProfile = async (req, res) => {
+    try {
+        const teacher = await Teacher.findById(req.params.id);
+        if (!teacher) return res.status(404).json({ message: "Teacher not found" });
 
+        res.status(200).json(teacher);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};// ✅ Teacher ke Allocated Classes fetch karne ka API
+exports.getTeacherClasses = async (req, res) => {
+    try {
+        const teacher = await Teacher.findById(req.params.id);
+        if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+        res.status(200).json({ classesAllocated: teacher.classesAllocated });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 // Ensure the correct path to your School model
 

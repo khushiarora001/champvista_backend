@@ -14,8 +14,8 @@ router.post('/leave/request', leaveController.createLeaveRequest);
 router.put('/leave/manage/:id', leaveController.manageLeave);
 router.get('/leave/get', leaveController.getLeaveRequestList);
 // Attendance Routes
-router.post('/attendance/mark', attendanceController.markAttendance);
-router.put('/attendance/update/:id', attendanceController.updateAttendance);
-router.put('/attendance/cancel/:id', attendanceController.cancelAttendance);
+// router.post('/attendance/mark', attendanceController.markAttendance);
+// router.put('/attendance/update/:id', attendanceController.updateAttendance);
+// router.put('/attendance/cancel/:id', attendanceController.cancelAttendance);
 
 module.exports = router;

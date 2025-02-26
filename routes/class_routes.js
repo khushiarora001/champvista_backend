@@ -5,18 +5,26 @@ const {
     updateClass,
     deleteClass,
     viewTimetable,
-    viewAttendance,
+    getTeacherAllocations,
     assignSubjects,
-    getClassList
+    getClassList,
+    updateTimetable,
+    createTimetable,
+    deleteTimetable,
+    getclassbyschool
 } = require('../controller/classController');
 const authenticate = require('../middleware/authenticate');
 
 // Routes
 router.post('/add', authenticate, addClass);
 router.put('/update/:id', authenticate, updateClass);
-router.delete('/delete/:id', authenticate, deleteClass);
-router.get('/timetable/:id', authenticate, viewTimetable);
-router.get('/attendance/:id', authenticate, viewAttendance);
+router.delete('/delete/:classId', authenticate, deleteClass);
+router.get('/timetable/:classId/:sectionId', authenticate, viewTimetable);
+router.get('/classes/teacherallocation/:teacherId', authenticate, getTeacherAllocations);
+router.post('/timetable/create/:classId/:sectionId', authenticate, createTimetable);
+router.post('/timetable/delete/:classId/:sectionId', authenticate, deleteTimetable);
+router.put('timetable/change/:classId/:sectionId', authenticate, updateTimetable)
 router.post('/assign-subject', authenticate, assignSubjects);
 router.get('/classes/:schoolEmail', authenticate, getClassList);
+router.get("/classes/onlysection/:schoolEmail", authenticate, getclassbyschool);
 module.exports = router;

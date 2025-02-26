@@ -1,96 +1,195 @@
-// POST /attendance/mark
-exports.markAttendance = async (req, res) => {
+const express = require("express");
+const Attendance = require("../model/attendence");
+const Leave = require("../model/leave");
+const TeacherAttendance = require("../model/teacherAttendence");
+const router = express.Router();
+
+// ✅ 1. Mark Attendance (Bulk for Class)
+router.post("/mark", async (req, res) => {
     try {
-        const { userId, date, status } = req.body;
+        const { classId, sectionId, date, attendance } = req.body;
 
-        // Check if the user has applied for leave
-        const leave = await Leave.findOne({ employeeId: userId, status: 'approved', fromDate: { $lte: date }, toDate: { $gte: date } });
-        if (leave) {
-            return res.status(403).json({ message: 'You cannot mark attendance while on approved leave.' });
+        for (let i = 0; i < attendance.length; i++) {
+            const leave = await Leave.findOne({
+                studentId: attendance[i].studentId,
+                fromDate: { $lte: date },
+                toDate: { $gte: date },
+                status: "Approved"
+            });
+
+            if (leave) {
+                attendance[i].status = "Leave";
+            }
         }
 
-        // Check if attendance already marked for this date
-        const existingAttendance = await Attendance.findOne({ userId, date });
-        if (existingAttendance) {
-            return res.status(400).json({ message: 'Attendance already marked for this date.' });
-        }
-
-        // Create new attendance record
-        const newAttendance = new Attendance({
-            userId,
+        const records = attendance.map(a => ({
+            studentId: a.studentId,
+            classId,
+            sectionId,
             date,
-            status,  // present/absent
-        });
+            status: a.status
+        }));
 
-        await newAttendance.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Attendance marked successfully',
-            attendance: newAttendance
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to mark attendance', error: error.message });
+        await Attendance.insertMany(records);
+        res.json({ success: true, message: "Attendance marked successfully", records });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
-};
+});
 
-// PUT /attendance/update/:id
-exports.updateAttendance = async (req, res) => {
+// ✅ 2. Update Attendance (Bulk)
+router.put("/update", async (req, res) => {
     try {
-        const { id } = req.params;
-        const { status } = req.body; // present or absent
+        const { classId, sectionId, date, attendance } = req.body;
 
-        const attendance = await Attendance.findById(id);
-        if (!attendance) return res.status(404).json({ message: 'Attendance not found' });
-
-        // Check if 24 hours have passed since attendance marking
-        const currentTime = new Date();
-        const attendanceTime = new Date(attendance.createdAt);
-        const diffTime = Math.abs(currentTime - attendanceTime);
-        const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-
-        if (diffHours < 24) {
-            return res.status(403).json({ message: 'You can only update attendance after 24 hours.' });
+        for (let i = 0; i < attendance.length; i++) {
+            await Attendance.updateOne(
+                { studentId: attendance[i].studentId, classId, sectionId, date },
+                { $set: { status: attendance[i].status } },
+                { upsert: true }
+            );
         }
 
-        // Update attendance status
-        attendance.status = status;
-        await attendance.save();
+        res.json({ success: true, message: "Attendance updated successfully" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
-        res.status(200).json({
+// ✅ 3. Get Student Attendance
+router.get("/student/:id", async (req, res) => {
+    try {
+        const attendance = await Attendance.find({ studentId: req.params.id });
+        res.json({ success: true, attendance });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ✅ 4. Get Class Attendance Report
+router.get("/class/:classId/:sectionId/:date", async (req, res) => {
+    try {
+        const { classId, sectionId, date } = req.params;
+
+        const presentCount = await Attendance.countDocuments({ classId, sectionId, date, status: "Present" });
+        const absentCount = await Attendance.countDocuments({ classId, sectionId, date, status: "Absent" });
+        const leaveCount = await Attendance.countDocuments({ classId, sectionId, date, status: "Leave" });
+
+        res.json({
             success: true,
-            message: `Attendance updated to ${status}`,
-            attendance
+            report: { present: presentCount, absent: absentCount, leave: leaveCount }
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to update attendance', error: error.message });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ✅ 5. Get School Attendance Report
+const schoolReport = async (req, res) => {
+    try {
+        const { schoolId } = req.params;
+        const { month, year } = req.query;
+
+        const startDate = `${year}-${month}-01`;
+        const endDate = `${year}-${month}-31`;
+
+        const totalClasses = await Attendance.countDocuments({ date: { $gte: startDate, $lte: endDate } });
+        const totalStudents = await Attendance.distinct("studentId").countDocuments();
+        const totalPresent = await Attendance.countDocuments({ status: "Present", date: { $gte: startDate, $lte: endDate } });
+
+        const attendancePercentage = ((totalPresent / (totalStudents * totalClasses)) * 100).toFixed(2);
+
+        res.json({
+            success: true,
+            report: {
+                totalClasses,
+                totalStudents,
+                averageAttendance: `${attendancePercentage}%`
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
-// PUT /attendance/cancel/:id
-exports.cancelAttendance = async (req, res) => {
+//teacher
+router.put("/update", async (req, res) => {
     try {
-        const { id } = req.params;
+        const { schoolId, date, attendance } = req.body;
 
-        const attendance = await Attendance.findById(id);
-        if (!attendance) return res.status(404).json({ message: 'Attendance record not found' });
-
-        // Allow canceling attendance only if the user has leave canceled or the leave is not active anymore
-        if (attendance.leaveStatus !== 'cancelled' && attendance.status !== 'absent') {
-            return res.status(403).json({ message: 'Attendance cannot be canceled at this stage.' });
+        for (let i = 0; i < attendance.length; i++) {
+            await TeacherAttendance.updateOne(
+                { teacherId: attendance[i].teacherId, schoolId, date },
+                { $set: { status: attendance[i].status } },
+                { upsert: true }
+            );
         }
 
-        // Remove the attendance record
-        await attendance.remove();
+        res.json({ success: true, message: "Teacher attendance updated successfully" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+router.post("/mark", async (req, res) => {
+    try {
+        const { schoolId, date, attendance } = req.body;
+
+        // Loop through all teachers to check leave status
+        for (let i = 0; i < attendance.length; i++) {
+            const leave = await Leave.findOne({
+                teacherId: attendance[i].teacherId,
+                fromDate: { $lte: date },
+                toDate: { $gte: date },
+                status: "Approved"
+            });
+
+            if (leave) {
+                attendance[i].status = "Leave"; // If leave is approved, mark as Leave
+            }
+        }
+
+        // Save attendance records
+        const records = attendance.map(a => ({
+            teacherId: a.teacherId,
+            schoolId,
+            date,
+            status: a.status
+        }));
+
+        await TeacherAttendance.insertMany(records);
+        res.json({ success: true, message: "Teacher attendance marked successfully", records });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+exports.getAttendanceByClassSectionDate = async (req, res) => {
+    try {
+        const { classId, sectionId, date } = req.params;
+
+        if (!classId || !sectionId || !date) {
+            return res.status(400).json({ success: false, message: 'classId, sectionId, and date are required' });
+        }
+
+        // Find attendance records matching classId, sectionId, and date.
+        const attendanceRecords = await Attendance.find({ classId, sectionId, date })
+            .populate('studentId', 'name email'); // Populate student details (only name & email)
 
         res.status(200).json({
             success: true,
-            message: 'Attendance canceled successfully'
+            attendance: attendanceRecords
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to cancel attendance', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance',
+            error: error.message
+        });
     }
 };
+
+
+
+router.get("/school/:schoolId", schoolReport);
+
+module.exports = { attendanceRoutes: router, schoolReport };

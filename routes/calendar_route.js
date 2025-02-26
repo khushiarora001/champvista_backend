@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const {
-    addCalendarEntry,
-    updateCalendarEntry
-} = require('../controller/calenderController');
-const authenticate = require('../middleware/authenticate');
+const calendarController = require('../controller/calenderController');
 
-// Routes
-router.post('/add', authenticate, addCalendarEntry);
-router.put('/update/:id', authenticate, updateCalendarEntry);
+router.post('/calendar/add', calendarController.addEvent);
+router.get('/calendar/:schoolEmail', calendarController.getEventsBySchool);
+router.get('/calendar', calendarController.getEventsByDate);
+router.put('/calendar/update/:eventId', calendarController.updateEvent);
+router.delete('/calendar/delete/:eventId', calendarController.deleteEvent);
 
 module.exports = router;
