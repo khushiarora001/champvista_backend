@@ -4,13 +4,14 @@ const {
     addTeacher,
     getTeacherBySchoolEmail,
     getTeacherProfile,
-    getTeacherClasses
+    getTeacherClasses,
+    disableTeacher
 } = require('../controller/teacherController');
 const authenticate = require('../middleware/authenticate');
 
 // Add a teacher (Single or Multiple)
 router.post('/add/teacher', authenticate, addTeacher);
-
+router.put('/disable/teacherID', authenticate, disableTeacher);
 // Get teacher by school email
 router.get('/school/:schoolEmail', authenticate, getTeacherBySchoolEmail);
 router.get("/:id/profile", getTeacherProfile);

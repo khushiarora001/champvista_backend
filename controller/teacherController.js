@@ -22,7 +22,9 @@ exports.getTeacherClasses = async (req, res) => {
     try {
         const teacher = await Teacher.findById(req.params.id);
         if (!teacher) return res.status(404).json({ message: "Teacher not found" });
-
+        if (teacher.disabled) {
+            return res.status(403).json({ message: 'This teacher is disabled and cannot be accessed.' });
+        }
         res.status(200).json({ classesAllocated: teacher.classesAllocated });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -35,12 +37,24 @@ exports.addTeacher = async (req, res) => {
     try {
         const { schoolEmail, teachers } = req.body;
 
+
         if (!schoolEmail) {
             return res.status(400).json({ message: 'School Email is required to add teachers.' });
         }
         if (!Array.isArray(teachers) || teachers.length === 0) {
             return res.status(400).json({ message: 'Invalid input. Expected a non-empty array of teachers.' });
         }
+        for (const teacher of teachers) {
+            const existingTeacher = await User.findOne({
+                $or: [{ email: teacher.email }, { phone: teacher.phone }],
+            });
+
+            if (existingTeacher) {
+                return res.status(400).json({ message: `Teacher with email ${teacher.email} or phone ${teacher.phone} already exists.` });
+            }
+        }
+
+
 
         // Find the school by email
         const school = await School.findOne({ schoolEmail: schoolEmail.trim() });
@@ -105,6 +119,37 @@ exports.addTeacher = async (req, res) => {
     }
 };
 
+// PUT /teacher/disable/:teacherId
+exports.disableTeacher = async (req, res) => {
+    try {
+        const { teacherId } = req.params;
+
+        // Find the teacher by ID
+        const teacher = await Teacher.findById(teacherId);
+        if (!teacher) {
+            return res.status(404).json({ message: 'Teacher not found.' });
+        }
+
+        // Disable the teacher
+        teacher.disabled = true;
+        await teacher.save();
+
+        // Optionally, you can disable the user associated with the teacher if you have a User model for authentication.
+        const user = await User.findOne({ email: teacher.email });
+        if (user) {
+            user.disabled = true;  // Assuming there's a `disabled` field in the User schema
+            await user.save();
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Teacher disabled successfully.',
+        });
+    } catch (error) {
+        console.error('Error disabling teacher:', error.message);
+        res.status(500).json({ message: 'Failed to disable teacher', error: error.message });
+    }
+};
 
 
 // GET /teacher/:schoolId

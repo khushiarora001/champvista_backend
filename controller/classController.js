@@ -86,12 +86,10 @@ exports.updateClass = async (req, res) => {
             return res.status(404).json({ message: 'Class not found or belongs to a different school' });
         }
 
-        // **Purane teachers ki list nikal lo**
-        const oldTeacherIds = new Set(
-            existingClass.subjects.map(sub => sub.teacherId)
-        );
+        // **Purane allocated teachers ka list**
+        const oldTeacherIds = new Set(existingClass.allocatedTeachers.map(id => id.toString()));
 
-        // **Naya data update karo**
+        // **Update class details**
         if (className) existingClass.className = className;
         if (subjects) existingClass.subjects = subjects;
 
@@ -101,6 +99,8 @@ exports.updateClass = async (req, res) => {
                 const existingSection = existingClass.sections.find(sec => sec.sectionName === newSection.sectionName);
 
                 if (existingSection) {
+                    existingSection.classTeacher = newSection.classTeacher || existingSection.classTeacher; // ✅ **Class Teacher Update**
+
                     existingSection.subjectTeachers = newSection.subjectTeachers.map(newTeacher => {
                         const existingTeacher = existingSection.subjectTeachers.find(
                             teacher => teacher.subject === newTeacher.subject
@@ -108,44 +108,41 @@ exports.updateClass = async (req, res) => {
 
                         if (existingTeacher) {
                             existingTeacher.teacherId = newTeacher.teacherId;
-                            newTeacherIds.add(newTeacher.teacherId); // ✅ Naye teachers collect karo
+                            newTeacherIds.add(newTeacher.teacherId);
                             return existingTeacher;
                         } else {
                             newTeacherIds.add(newTeacher.teacherId);
                             return newTeacher;
                         }
                     });
+
+                    newTeacherIds.add(existingSection.classTeacher); // ✅ **Class Teacher ko bhi add karo**
                     return existingSection;
                 } else {
                     newSection.subjectTeachers.forEach(t => newTeacherIds.add(t.teacherId));
+                    newTeacherIds.add(newSection.classTeacher); // ✅ **Class Teacher Add**
                     return newSection;
                 }
             });
         }
 
+        // ✅ **Allocated Teachers Update**
+        const allTeachers = [...new Set([...newTeacherIds])].filter(id => mongoose.Types.ObjectId.isValid(id));
+        existingClass.allocatedTeachers = allTeachers;
+
         await existingClass.save();
-        console.log("New Teacher IDs:", newTeacherIds);
+        console.log("✅ Updated Teachers List:", allTeachers);
 
+        // ✅ **Identify added & removed teachers**
+        const addedTeachers = allTeachers.filter(id => !oldTeacherIds.has(id.toString()));
+        const removedTeachers = [...oldTeacherIds].filter(id => !allTeachers.includes(id));
 
-        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-
-        const addedTeachers = [...newTeacherIds]
-            .filter(id => isValidObjectId(id) && !oldTeacherIds.has(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-
-        const removedTeachers = [...oldTeacherIds]
-            .filter(id => isValidObjectId(id) && !newTeacherIds.has(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-
-
-
-        // ✅ Naye teachers ko classAllocated me add karo
+        // ✅ **Update Teachers Collection**
         await Teacher.updateMany(
             { _id: { $in: addedTeachers } },
             { $addToSet: { classAllocated: classId } }
         );
 
-        // ❌ Purane teachers se classAllocated hatao
         await Teacher.updateMany(
             { _id: { $in: removedTeachers } },
             { $pull: { classAllocated: classId } }
@@ -161,6 +158,7 @@ exports.updateClass = async (req, res) => {
         res.status(500).json({ message: 'Failed to update class' });
     }
 };
+
 
 // DELETE /class/delete/:id
 exports.deleteClass = async (req, res) => {
