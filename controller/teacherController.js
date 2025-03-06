@@ -158,21 +158,65 @@ exports.getTeacherBySchoolEmail = async (req, res) => {
     try {
         const { schoolEmail } = req.params;
 
-        // Validate input
         if (!schoolEmail) {
             return res.status(400).json({ message: 'School email is required.' });
         }
 
-        // Find teachers by school email
-        const teachers = await Teacher.find({ schoolEmail });
+        // Find teachers by school email, excluding disabled ones
+        const teachers = await Teacher.find({ schoolEmail, disabled: { $ne: true } })
+            .populate({
+                path: 'classAllocated',
+                populate: [
+                    {
+                        path: 'sections.classTeacher', // Populate class teacher
+                        select: '_id name email'
+                    },
+                    {
+                        path: 'sections.subjectTeachers.teacherId', // Populate subject teachers
+                        select: '_id name email'
+                    }
+                ],
+                select: 'className sections'
+            });
 
         if (teachers.length === 0) {
             return res.status(404).json({ message: 'No teachers found for this school email.' });
         }
 
+        const filteredTeachers = teachers.map(teacher => ({
+            ...teacher.toObject(),
+            classAllocated: teacher.classAllocated.map(classItem => ({
+                className: classItem.className,
+                sections: (classItem.sections || [])
+                    .map(section => {
+                        let roles = [];
+
+                        // ✅ Check if this teacher is the class teacher
+                        if (section.classTeacher?._id.toString() === teacher._id.toString()) {
+                            roles.push("Class Teacher");
+                        }
+
+                        // ✅ Find all subjects this teacher teaches in this section
+                        let taughtSubjects = section.subjectTeachers
+                            .filter(st => st.teacherId?._id.toString() === teacher._id.toString())
+                            .map(st => st.subject);
+
+                        if (taughtSubjects.length > 0) {
+                            roles.push(`Teaches: ${taughtSubjects.join(", ")}`);
+                        }
+
+                        return {
+                            sectionName: section.sectionName,
+                            role: roles.length > 0 ? roles.join(" | ") : "None"
+                        };
+                    })
+                    .filter(section => section.role !== "None"), // ✅ Only return sections where teacher has a role
+            })),
+        }));
+
         res.status(200).json({
             success: true,
-            teachers,
+            teachers: filteredTeachers,
             message: 'Teachers fetched successfully.',
         });
     } catch (error) {
@@ -180,6 +224,8 @@ exports.getTeacherBySchoolEmail = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch teachers', error: error.message });
     }
 };
+
+
 
 
 // PUT /teacher/update/:teacherId

@@ -4,9 +4,10 @@ const School = require("../model/school");
 // ✅ POST: Add Event to School Calendar
 exports.addEvent = async (req, res) => {
     try {
-        const { schoolEmail, eventName, eventType, eventDate, description } = req.body;
+        const { schoolEmail, eventName, eventType, eventStartDate, eventEndDate, description } = req.body;
 
-        if (!schoolEmail || !eventName || !eventType || !eventDate) {
+        if (!schoolEmail || !eventName || !eventType || !eventStartDate || !eventEndDate
+        ) {
             return res.status(400).json({ message: "Missing required fields." });
         }
 
@@ -16,7 +17,7 @@ exports.addEvent = async (req, res) => {
             return res.status(404).json({ message: "School not found." });
         }
 
-        const newEvent = new Calendar({ schoolEmail, eventName, eventType, eventDate, description });
+        const newEvent = new Calendar({ schoolEmail, eventName, eventType, eventStartDate, eventEndDate, description });
         await newEvent.save();
 
         res.status(201).json({ success: true, message: "Event added successfully", event: newEvent });

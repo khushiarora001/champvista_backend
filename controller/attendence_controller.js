@@ -3,15 +3,30 @@ const Attendance = require("../model/attendence");
 const Leave = require("../model/leave");
 const TeacherAttendance = require("../model/teacherAttendence");
 const router = express.Router();
-
+const User = require("../model/user");
 // ✅ 1. Mark Attendance (Bulk for Class)
-router.post("/mark", async (req, res) => {
+exports.markAttendance = async (req, res) => {
     try {
         const { classId, sectionId, date, attendance } = req.body;
 
+        // ✅ Validate that attendance array exists
+        if (!attendance || !Array.isArray(attendance) || attendance.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Attendance array is required and cannot be empty."
+            });
+        }
+        const existingRecords = await Attendance.find({ classId, sectionId, date });
+
+        if (existingRecords.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Attendance for this class and section is already marked for the given date."
+            });
+        }
         for (let i = 0; i < attendance.length; i++) {
             const leave = await Leave.findOne({
-                studentId: attendance[i].studentId,
+                studentId: attendance[i].userId,  // ✅ Fix: Use `userId` instead of `studentId`
                 fromDate: { $lte: date },
                 toDate: { $gte: date },
                 status: "Approved"
@@ -23,7 +38,8 @@ router.post("/mark", async (req, res) => {
         }
 
         const records = attendance.map(a => ({
-            studentId: a.studentId,
+            userId: a.userId, // ✅ Fix: Use `userId` field
+            userType: a.userType, // ✅ Fix: Include `userType`
             classId,
             sectionId,
             date,
@@ -35,7 +51,7 @@ router.post("/mark", async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
-});
+};
 
 // ✅ 2. Update Attendance (Bulk)
 router.put("/update", async (req, res) => {
@@ -57,14 +73,21 @@ router.put("/update", async (req, res) => {
 });
 
 // ✅ 3. Get Student Attendance
-router.get("/student/:id", async (req, res) => {
+
+exports.getStudentAttendace = async (req, res) => {
+
     try {
-        const attendance = await Attendance.find({ studentId: req.params.id });
+        const email = req.params.email;
+        const attendance = await Attendance.find({ "userId": email });
+        // If no records are found
+        if (attendance.length === 0) {
+            return res.status(404).json({ success: false, message: 'No attendance records found for this email' });
+        }
         res.json({ success: true, attendance });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
-});
+};
 
 // ✅ 4. Get Class Attendance Report
 router.get("/class/:classId/:sectionId/:date", async (req, res) => {
@@ -163,6 +186,8 @@ router.post("/mark", async (req, res) => {
     }
 });
 
+// Ensure User model is imported
+
 exports.getAttendanceByClassSectionDate = async (req, res) => {
     try {
         const { classId, sectionId, date } = req.params;
@@ -171,15 +196,38 @@ exports.getAttendanceByClassSectionDate = async (req, res) => {
             return res.status(400).json({ success: false, message: 'classId, sectionId, and date are required' });
         }
 
-        // Find attendance records matching classId, sectionId, and date.
-        const attendanceRecords = await Attendance.find({ classId, sectionId, date })
-            .populate('studentId', 'name email'); // Populate student details (only name & email)
+        // Ensure date is in correct format
+        const formattedDate = new Date(date).toISOString().split("T")[0];
+
+        // Fetch attendance records
+        const attendanceRecords = await Attendance.find({ classId, sectionId, date: formattedDate });
+
+        if (!attendanceRecords.length) {
+            return res.status(404).json({ success: false, message: "No attendance records found" });
+        }
+
+        // Fetch user details manually using userId
+        const formattedAttendance = await Promise.all(attendanceRecords.map(async (record) => {
+            console.log(record.userId)
+            const user = await User.findById(record.userId).select("name email");
+            console.log(user);
+            return {
+                _id: record._id,
+                classId: record.classId,
+                sectionId: record.sectionId,
+                date: record.date,
+                user: user ? { name: user.name, email: user.email } : null,
+                status: record.status
+            };
+        }));
 
         res.status(200).json({
             success: true,
-            attendance: attendanceRecords
+            attendance: formattedAttendance
         });
+
     } catch (error) {
+        console.error("🔥 Error fetching attendance:", error);
         res.status(500).json({
             success: false,
             message: 'Error fetching attendance',
@@ -190,6 +238,8 @@ exports.getAttendanceByClassSectionDate = async (req, res) => {
 
 
 
+
+
 router.get("/school/:schoolId", schoolReport);
 
-module.exports = { attendanceRoutes: router, schoolReport };
+

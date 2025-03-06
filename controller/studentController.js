@@ -185,15 +185,38 @@ exports.getStudentsBySchoolEmail = async (req, res) => {
         // Fetch students belonging to the given schoolEmail
         const students = await Student.find({ schoolEmail });
 
+        if (!students.length) {
+            return res.status(404).json({ message: "No students found for this school email" });
+        }
+
+        const studentsWithUserId = await Promise.all(
+            students.map(async (student) => {
+                console.log(`🔍 Checking Student Email: ${student.email}`);
+
+                const user = await User.findOne({
+                    email: new RegExp(`^${student.email}$`, "i") // Case Insensitive
+                }).select("_id");
+
+                console.log(`✅ Found User:`, user ? user._id : "❌ Not Found");
+
+                return {
+                    ...student._doc,
+                    userId: user ? user._id : null
+                };
+            })
+        );
+
         res.status(200).json({
-            message: 'Students fetched successfully',
-            students
+            message: "Students fetched successfully",
+            students: studentsWithUserId
         });
+
     } catch (error) {
         console.error("🔥 Error fetching students by school email:", error);
-        res.status(500).json({ message: 'Error fetching students', error: error.message });
+        res.status(500).json({ message: "Error fetching students", error: error.message });
     }
 };
+
 
 
 exports.updateStudent = async (req, res) => {
@@ -282,10 +305,25 @@ exports.getStudentsByClassAndSection = async (req, res) => {
 
         // Find students matching both classId and sectionId
         const students = await Student.find({ classId, sectionId });
+        const studentsWithUserId = await Promise.all(
+            students.map(async (student) => {
+                console.log(`🔍 Checking Student Email: ${student.email}`);
 
+                const user = await User.findOne({
+                    email: new RegExp(`^${student.email}$`, "i") // Case Insensitive
+                }).select("_id");
+
+                console.log(`✅ Found User:`, user ? user._id : "❌ Not Found");
+
+                return {
+                    ...student._doc,
+                    userId: user ? user._id : null
+                };
+            })
+        );
         res.status(200).json({
             message: 'Students fetched successfully',
-            students
+            studentsWithUserId
         });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching students', error: error.message });

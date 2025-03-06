@@ -3,7 +3,7 @@ const User = require('../model/user')
 // PUT /leave/manage/:id
 const mongoose = require('mongoose');
 const Attendance = require('../model/attendence');
-
+const Student = require("../model/student"); // Import Student Model
 exports.manageLeave = async (req, res) => {
     try {
         const { id } = req.params;
@@ -107,7 +107,8 @@ const generateDateRange = (fromDate, toDate) => {
     return dates;
 };
 
-// GET /leave/requests
+
+
 
 exports.getLeaveRequestList = async (req, res) => {
     try {
@@ -131,11 +132,28 @@ exports.getLeaveRequestList = async (req, res) => {
 
         // Fetch leave requests and populate user details
         const leaves = await Leave.find(filter)
-            .populate("userId", "name email role phone")
+            .populate({
+                path: "userId",
+                select: "name email role phone",
+            })
             .skip(skip)
             .limit(limitNumber)
             .sort({ fromDate: -1 })
             .lean(); // Convert to JSON
+
+        // Fetch class and section if user is a student
+        for (let leave of leaves) {
+            if (leave.userId && leave.userId.role === "Student") {
+                const student = await Student.findOne({ email: leave.userId.email })
+                    .select("classId sectionId")
+                    .lean();
+
+                if (student) {
+                    leave.classId = student.classId;
+                    leave.sectionId = student.sectionId;
+                }
+            }
+        }
 
         const totalLeaves = await Leave.countDocuments(filter);
 
@@ -151,9 +169,6 @@ exports.getLeaveRequestList = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to retrieve leave requests", error: error.message });
     }
 };
-
-
-
 
 
 // POST /leave/request
