@@ -63,8 +63,15 @@ exports.addStudent = async (req, res) => {
             idCardUrl
         } = req.body;
         console.log("Received image data:", imageUrl);
+        const existingStudent = await Student.findOne({ admissionNumber });
         // Get schoolId, teacherId, and optionally schoolEmail from the authenticated user.
-
+        if (existingStudent) {
+            return res.status(400).json({ message: "Admission number already exists" });
+        }
+        const existingemail = await Student.findOne({ email });
+        if (existingemail) {
+            return res.status(400).json({ message: "email already exists" });
+        }
         const teacherId = req.user.teacherId;
         let savedPhotoImageUrl = imageUrl;
         let savedIDImageUrl = idCardUrl;

@@ -4,6 +4,7 @@ const User = require('../model/user');
 const School = require('../model/school')
 const Teacher = require('../model/teacher');
 const Student = require('../model/student');
+const { response } = require('../server');
 // Signup Route
 exports.signup = async (req, res) => {
     try {
@@ -146,7 +147,7 @@ exports.login = async (req, res) => {
         // Generate JWT Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '48h' });
 
-        response = {
+        let response = {
             success: 1,
             userId: user._id,
             email: user.email,
@@ -161,6 +162,7 @@ exports.login = async (req, res) => {
         if (user.role === "School") {
             response.schoolId = user.schoolId;
             response.schoolEmail = user.schoolEmail;
+            response.name = school.name
             response.imageUrl = school.
                 imageUrl;
         } else if (user.role === "Teacher") {
@@ -173,6 +175,8 @@ exports.login = async (req, res) => {
             response.schoolId = user.schoolId;
             response.schoolEmail = student.schoolEmail;
             response.studentID = student.id;
+            response.classId = student.classId;
+            response.sectionId = student.sectionId;
             response.assignedBy = user.assignedBy;
         }
         res.json(response);
