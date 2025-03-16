@@ -190,14 +190,14 @@ exports.getStudentsBySchoolEmail = async (req, res) => {
         }
 
         // Fetch students belonging to the given schoolEmail
-        const students = await Student.find({ schoolEmail });
+        const student = await Student.find({ schoolEmail });
 
-        if (!students.length) {
+        if (!student.length) {
             return res.status(404).json({ message: "No students found for this school email" });
         }
 
-        const studentsWithUserId = await Promise.all(
-            students.map(async (student) => {
+        const students = await Promise.all(
+            student.map(async (student) => {
                 console.log(`🔍 Checking Student Email: ${student.email}`);
 
                 const user = await User.findOne({
@@ -215,7 +215,7 @@ exports.getStudentsBySchoolEmail = async (req, res) => {
 
         res.status(200).json({
             message: "Students fetched successfully",
-            students: studentsWithUserId
+            students: students
         });
 
     } catch (error) {
@@ -311,9 +311,9 @@ exports.getStudentsByClassAndSection = async (req, res) => {
         }
 
         // Find students matching both classId and sectionId
-        const students = await Student.find({ classId, sectionId });
-        const studentsWithUserId = await Promise.all(
-            students.map(async (student) => {
+        const student = await Student.find({ classId, sectionId });
+        const students = await Promise.all(
+            student.map(async (student) => {
                 console.log(`🔍 Checking Student Email: ${student.email}`);
 
                 const user = await User.findOne({
@@ -330,7 +330,7 @@ exports.getStudentsByClassAndSection = async (req, res) => {
         );
         res.status(200).json({
             message: 'Students fetched successfully',
-            studentsWithUserId
+            students
         });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching students', error: error.message });

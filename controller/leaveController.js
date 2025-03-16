@@ -180,20 +180,26 @@ exports.createLeaveRequest = async (req, res) => {
         if (!userId || !fromDate || !toDate || !reason || !schoolEmail) {
             return res.status(400).json({ message: 'User ID, From Date, To Date, Reason, and School Email are required.' });
         }
+        const fromDateObj = new Date(fromDate);
+        const toDateObj = new Date(toDate);
 
+        // Convert to local time (optional, but not recommended)
+        const localFromDate = new Date(fromDateObj.getTime() - fromDateObj.getTimezoneOffset() * 60000);
+        const localToDate = new Date(toDateObj.getTime() - toDateObj.getTimezoneOffset() * 60000);
         // Calculate the number of leave days (optional if you want it to be auto-calculated)
         const diffTime = Math.abs(new Date(toDate) - new Date(fromDate));
         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Convert to days
 
-        // Create a new leave request
         const leaveRequest = new Leave({
             userId,
-            fromDate,
-            toDate,
+            fromDate: localFromDate,
+            toDate: localToDate,
             reason,
             schoolEmail,
             days
         });
+
+
 
         // Save the leave request to the database
         await leaveRequest.save();
