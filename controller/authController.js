@@ -168,7 +168,7 @@ exports.login = async (req, res) => {
         } else if (user.role === "Teacher") {
             console.log(teacher);
             response.teacherId = teacher.id;
-
+            response.name = teacher.name;
             response.schoolEmail = teacher.schoolEmail;
             response.schoolId = user.schoolId;
         } else if (user.role === "Student") {
