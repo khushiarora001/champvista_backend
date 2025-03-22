@@ -5,17 +5,18 @@ const Event = require('../model/calendar');
 const moment = require('moment');
 const cron = require('node-cron');
 const admin = require("firebase-admin");
-const serviceAccount = require("../servicejson/champvistaapp-firebase-adminsdk-fbsvc-a6b901b7b7.json");
+
+//const serviceAccount = require("../servicejson/champvistaapp-firebase-adminsdk-fbsvc-a6b901b7b7.json");
 const app = express.Router();
 const User = require('../model/user');
-const admin = require("firebase-admin");
+// const admin = require("firebase-admin");
 
-const serviceAccount = JSON.parse(
-    Buffer.from(process.env.FIREBASE_CONFIG, "base64").toString("utf-8")
-);
+// const serviceAccount = JSON.parse(
+//     Buffer.from(process.env.FIREBASE_CONFIG, "base64").toString("utf-8")
+// );
 
 
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+// admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // admin.initializeApp({
 //     credential: admin.credential.cert(serviceAccount),

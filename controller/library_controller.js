@@ -101,7 +101,4 @@ app.get("/all-issued-books", async (req, res) => {
 });
 
 // 📌 Start Server
-const PORT = 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+module.exports = app;

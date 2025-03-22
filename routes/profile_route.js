@@ -1,4 +1,7 @@
+
 const express = require("express");
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const { getTeacherProfile, updateTeacherProfile, getStudentProfileByEmail, updateStudentProfile } = require("../controller/profile_controller");
 const router = express.Router();
 
