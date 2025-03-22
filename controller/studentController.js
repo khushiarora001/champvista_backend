@@ -181,6 +181,37 @@ function saveBase64Image(base64Data, filePath) {
     const buffer = Buffer.from(base64Image, 'base64');
     fs.writeFileSync(filePath, buffer);
 }
+
+exports.disableStudent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // Find the teacher by ID
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found.' });
+        }
+
+        // Disable the teacher
+        student.disabled = true;
+        await student.save();
+
+        // Optionally, you can disable the user associated with the teacher if you have a User model for authentication.
+        const user = await User.findOne({ email: student.email });
+        if (user) {
+            user.disabled = true;  // Assuming there's a `disabled` field in the User schema
+            await user.save();
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Student disabled successfully.',
+        });
+    } catch (error) {
+        console.error('Error disabling student:', error.message);
+        res.status(500).json({ message: 'Failed to disable student', error: error.message });
+    }
+};
 exports.getStudentsBySchoolEmail = async (req, res) => {
     try {
         const { schoolEmail } = req.params;
@@ -190,7 +221,7 @@ exports.getStudentsBySchoolEmail = async (req, res) => {
         }
 
         // Fetch students belonging to the given schoolEmail
-        const student = await Student.find({ schoolEmail });
+        const student = await Student.find({ schoolEmail, disabled: { $ne: true } });
 
         if (!student.length) {
             return res.status(404).json({ message: "No students found for this school email" });
@@ -291,7 +322,7 @@ exports.getStudentsByClass = async (req, res) => {
             return res.status(400).json({ message: 'Class ID is required' });
         }
 
-        const students = await Student.find({ classId });
+        const students = await Student.find({ classId, disabled: { $ne: true } });
 
         res.status(200).json({
             message: 'Students fetched successfully',
@@ -311,7 +342,7 @@ exports.getStudentsByClassAndSection = async (req, res) => {
         }
 
         // Find students matching both classId and sectionId
-        const student = await Student.find({ classId, sectionId });
+        const student = await Student.find({ classId, sectionId, disabled: { $ne: true } });
         const students = await Promise.all(
             student.map(async (student) => {
                 console.log(`🔍 Checking Student Email: ${student.email}`);

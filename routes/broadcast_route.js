@@ -12,7 +12,7 @@ const authenticate = require('../middleware/authenticate');
 
 // Routes
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ dest: 'uploads/' });
 
 router.post('/broadcastmessage', authenticate, upload.single('image'), giveBroadCast);
 router.get('/getbroadcast', authenticate, getBroadCastMessage);

@@ -17,7 +17,7 @@ exports.giveBroadCast = async (req, res) => {
 
         // Convert image to base64 if provided
         let imageUrl = null;
-        if (req.file) {
+        if (req.image) {
             imageUrl = `data:image/jpeg;base64,${req.file.buffer.toString("base64")}`;
         }
 

@@ -298,9 +298,7 @@ exports.createTimetable = async (req, res) => {
         console.log("🟡 Received request to create timetable for:", { classId, sectionId });
 
         // Validate inputs
-        if (!timetableData || typeof timetableData !== "object") {
-            return res.status(400).json({ success: false, message: "Invalid timetable data" });
-        }
+
 
         if (!mongoose.Types.ObjectId.isValid(classId) || !mongoose.Types.ObjectId.isValid(sectionId)) {
             return res.status(400).json({ success: false, message: "Invalid class/section ID" });
@@ -329,7 +327,7 @@ exports.createTimetable = async (req, res) => {
         }
 
         console.log("✅ Class & Section found:", classExists.name);
-
+        console.log(timetableData);
         // ✅ Create or update timetable
         const updatedTimetable = await Timetable.findOneAndUpdate(
             { classId, sectionId },
@@ -480,7 +478,12 @@ exports.getClassList = async (req, res) => {
             .populate({
                 path: 'sections.subjectTeachers.teacherId',
                 select: 'name',
-            });
+            })
+            .populate({
+                path: 'sections.sectionName',
+                select: 'name',
+            })
+            ;
 
         console.log("Classes found:", classes);
 
@@ -493,6 +496,7 @@ exports.getClassList = async (req, res) => {
                 classTeacher: section.classTeacher?.name ?? "N/A",
                 classTeacherID: section.classTeacher?._id ?? "N/A",
                 sectionName: section.sectionName,
+                sectionId: section._id ?? 'N/A',
                 subjectTeachers: section.subjectTeachers.map(subjectTeacher => ({
                     teacherID: subjectTeacher.teacherId?._id ?? null,
                     subject: subjectTeacher.subject,

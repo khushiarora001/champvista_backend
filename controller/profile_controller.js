@@ -37,18 +37,48 @@ exports.getTeacherProfile = async (req, res) => {
 };
 
 
+const multer = require("multer");
+
+
+// ✅ 1️⃣ Set up Multer Storage (Uploads Folder)
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "uploads/"); //
+    },
+    filename: function (req, file, cb) {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+// ✅ 2️⃣ Multer File Filter (सिर्फ इमेज फाइल्स अलाउ करें)
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+        cb(null, true);
+    } else {
+        cb(new Error("Only images are allowed"), false);
+    }
+};
+
+// ✅ 3️⃣ Multer Middleware
+const upload = multer({ storage, fileFilter });
+
 exports.updateTeacherProfile = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, dob, phone, address, city, state, gender, photo, subject, classAllocated } = req.body;
+        const { name, dob, phone, address, city, state, gender, subject, classAllocated } = req.body;
 
-        // Find teacher before updating
+        // ✅ टीचर को खोजें
         const existingTeacher = await Teacher.findById(id);
         if (!existingTeacher) {
             return res.status(404).json({ success: false, message: "Teacher not found" });
         }
 
-        // Update fields only if they are provided in req.body
+        // ✅ अगर नई फ़ोटो अपलोड हुई है, तो पुरानी फ़ोटो को हटा दें
+        if (req.file) {
+            existingTeacher.photo = `/uploads/${req.file.filename}`;
+        }
+
+        // ✅ अन्य डिटेल्स अपडेट करें
         existingTeacher.name = name || existingTeacher.name;
         existingTeacher.dob = dob || existingTeacher.dob;
         existingTeacher.phone = phone || existingTeacher.phone;
@@ -56,11 +86,10 @@ exports.updateTeacherProfile = async (req, res) => {
         existingTeacher.city = city || existingTeacher.city;
         existingTeacher.state = state || existingTeacher.state;
         existingTeacher.gender = gender || existingTeacher.gender;
-        existingTeacher.photo = photo || existingTeacher.photo;
         existingTeacher.subject = subject || existingTeacher.subject;
         existingTeacher.classAllocated = classAllocated || existingTeacher.classAllocated;
 
-        // Save updated teacher
+        // ✅ अपडेटेड डेटा सेव करें
         await existingTeacher.save();
 
         res.status(200).json({
@@ -68,11 +97,17 @@ exports.updateTeacherProfile = async (req, res) => {
             message: "Teacher profile updated successfully",
             data: existingTeacher
         });
+
     } catch (error) {
         console.error("Error updating teacher profile:", error);
         res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
     }
 };
+
+
+
+
+
 exports.getStudentProfileByEmail = async (req, res) => {
     try {
         const { email } = req.params; // Extract email from request parameters
@@ -108,19 +143,29 @@ exports.getStudentProfileByEmail = async (req, res) => {
 };
 
 
-// ✅ Update Student Profile
+
+// ✅ 3️⃣ Multer File Filter (सिर्फ इमेज फाइल्स अलाउ करें)
+
+
+
+// ✅ 5️⃣ Update Student Profile
 exports.updateStudentProfile = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, dob, phone, address, city, state, gender, photo } = req.body;
+        const { name, dob, phone, address, city, state, gender } = req.body;
 
-        // Find student before updating
+        // ✅ स्टूडेंट को खोजें
         const existingStudent = await Student.findById(id);
         if (!existingStudent) {
             return res.status(404).json({ success: false, message: "Student not found" });
         }
 
-        // Update fields only if they are provided in req.body
+        // ✅ अगर नई फ़ोटो अपलोड हुई है, तो पुरानी फ़ोटो को हटा दें
+        if (req.file) {
+            existingStudent.photo = `/uploads/${req.file.filename}`;
+        }
+
+        // ✅ अन्य डिटेल्स अपडेट करें
         existingStudent.name = name || existingStudent.name;
         existingStudent.dob = dob || existingStudent.dob;
         existingStudent.phone = phone || existingStudent.phone;
@@ -128,9 +173,8 @@ exports.updateStudentProfile = async (req, res) => {
         existingStudent.city = city || existingStudent.city;
         existingStudent.state = state || existingStudent.state;
         existingStudent.gender = gender || existingStudent.gender;
-        existingStudent.photo = photo || existingStudent.photo;
 
-        // Save updated student
+        // ✅ अपडेटेड डेटा सेव करें
         await existingStudent.save();
 
         res.status(200).json({
@@ -138,6 +182,7 @@ exports.updateStudentProfile = async (req, res) => {
             message: "Student profile updated successfully",
             data: existingStudent
         });
+
     } catch (error) {
         console.error("Error updating student profile:", error);
         res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });

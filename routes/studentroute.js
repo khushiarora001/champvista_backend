@@ -9,7 +9,8 @@ const {
     manageStudentFees,
     downloadStudentPDF,
     getSchoolCalendar,
-    getStudentsBySchoolEmail
+    getStudentsBySchoolEmail,
+    disableStudent
 } = require('../controller/studentController');
 
 const authenticate = require('../middleware/authenticate');
@@ -23,6 +24,7 @@ router.post('/add', authenticate, upload.fields([{ name: 'photo' }, { name: 'idC
 router.put('/update/:id', authenticate, upload.fields([{ name: 'photo' }, { name: 'idCard' }]), updateStudent);
 router.get('/students/:classId/:sectionId', authenticate, getStudentsByClassAndSection);
 router.put('/fees', authenticate, manageStudentFees);
+router.put('/student/disable/:studentId', authenticate, disableStudent);
 router.get('/pdf/:id', authenticate, downloadStudentPDF);
 router.get('/calendar/school', authenticate, getSchoolCalendar);
 router.get('/school/:schoolEmail', authenticate, getStudentsBySchoolEmail);
